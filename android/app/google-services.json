@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "326884314125",
+    "project_id": "mint---chat-app",
+    "storage_bucket": "mint---chat-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326884314125:android:ba004b417c62323e275944",
+        "android_client_info": {
+          "package_name": "com.mycompany.mint"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "326884314125-edekhdv8ccr79aflhdb1bj4s2jr0c1im.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTmmcodGo5Ya-N6fcS6K-TYFl4QL84H18"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "326884314125-edekhdv8ccr79aflhdb1bj4s2jr0c1im.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
