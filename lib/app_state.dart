@@ -26,10 +26,4 @@ class FFAppState extends ChangeNotifier {
   set currentSlideIndex(int value) {
     _currentSlideIndex = value;
   }
-
-  bool _isProfileDropdownOpen = false;
-  bool get isProfileDropdownOpen => _isProfileDropdownOpen;
-  set isProfileDropdownOpen(bool value) {
-    _isProfileDropdownOpen = value;
-  }
 }

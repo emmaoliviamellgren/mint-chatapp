@@ -75,14 +75,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       debugLogDiagnostics: true,
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
-      errorBuilder: (context, state) =>
-          appStateNotifier.loggedIn ? UserDashboardWidget() : LoginWidget(),
+      errorBuilder: (context, state) => appStateNotifier.loggedIn
+          ? UserDashboardWidget()
+          : LandingPageWidget(),
       routes: [
         FFRoute(
           name: '_initialize',
           path: '/',
-          builder: (context, _) =>
-              appStateNotifier.loggedIn ? UserDashboardWidget() : LoginWidget(),
+          builder: (context, _) => appStateNotifier.loggedIn
+              ? UserDashboardWidget()
+              : LandingPageWidget(),
         ),
         FFRoute(
           name: LoginWidget.routeName,
@@ -115,9 +117,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => ProfileSettingsWidget(),
         ),
         FFRoute(
-          name: EditProfileWidget.routeName,
-          path: EditProfileWidget.routePath,
-          builder: (context, params) => EditProfileWidget(),
+          name: CreateProfileWidget.routeName,
+          path: CreateProfileWidget.routePath,
+          builder: (context, params) => CreateProfileWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
@@ -288,7 +290,7 @@ class FFRoute {
 
           if (requireAuth && !appStateNotifier.loggedIn) {
             appStateNotifier.setRedirectLocationIfUnset(state.uri.toString());
-            return '/login';
+            return '/landingPage';
           }
           return null;
         },

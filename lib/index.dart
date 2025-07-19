@@ -9,5 +9,5 @@ export '/components/pages/landing_page/landing_page_widget.dart'
     show LandingPageWidget;
 export '/components/pages/profile_settings/profile_settings_widget.dart'
     show ProfileSettingsWidget;
-export '/components/pages/edit_profile/edit_profile_widget.dart'
-    show EditProfileWidget;
+export '/components/pages/create_profile/create_profile_widget.dart'
+    show CreateProfileWidget;

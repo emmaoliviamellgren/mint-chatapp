@@ -1,7 +1,9 @@
 import '/auth/firebase_auth/auth_util.dart';
+import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/flutter_flow/random_data_util.dart' as random_data;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -232,26 +234,26 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                           .secondaryBackground,
                                     ),
                                     style: FlutterFlowTheme.of(context)
-                                        .bodyLarge
+                                        .bodyMedium
                                         .override(
                                           font: GoogleFonts.manrope(
                                             fontWeight:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontWeight,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontStyle,
                                           ),
                                           letterSpacing: 0.0,
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                     textAlign: TextAlign.start,
@@ -369,24 +371,24 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
@@ -504,24 +506,24 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
@@ -558,6 +560,29 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                               if (user == null) {
                                 return;
                               }
+
+                              await UsersRecord.collection
+                                  .doc(user.uid)
+                                  .update({
+                                ...createUsersRecordData(
+                                  email: _model.eMailInputTextController.text,
+                                  uid: random_data.randomString(
+                                    6,
+                                    6,
+                                    false,
+                                    false,
+                                    true,
+                                  ),
+                                ),
+                                ...mapToFirestore(
+                                  {
+                                    'created_time':
+                                        FieldValue.serverTimestamp(),
+                                    'last_active_time':
+                                        FieldValue.serverTimestamp(),
+                                  },
+                                ),
+                              });
 
                               context.goNamedAuth(UserDashboardWidget.routeName,
                                   context.mounted);

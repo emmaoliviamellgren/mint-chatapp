@@ -229,26 +229,26 @@ class _LoginWidgetState extends State<LoginWidget> {
                                           .secondaryBackground,
                                     ),
                                     style: FlutterFlowTheme.of(context)
-                                        .bodyLarge
+                                        .bodyMedium
                                         .override(
                                           font: GoogleFonts.manrope(
                                             fontWeight:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontWeight,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontStyle,
                                           ),
                                           letterSpacing: 0.0,
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                     textAlign: TextAlign.start,
@@ -366,24 +366,24 @@ class _LoginWidgetState extends State<LoginWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
