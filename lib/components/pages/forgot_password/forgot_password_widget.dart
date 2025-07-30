@@ -1,4 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
+import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -43,6 +44,44 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(56.0),
+        child: AppBar(
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+          automaticallyImplyLeading: false,
+          leading: FlutterFlowIconButton(
+            borderColor: Colors.transparent,
+            borderRadius: 30.0,
+            borderWidth: 1.0,
+            buttonSize: 60.0,
+            icon: Icon(
+              Icons.arrow_back_ios_rounded,
+              color: FlutterFlowTheme.of(context).primary,
+              size: 20.0,
+            ),
+            onPressed: () async {
+              context.safePop();
+            },
+          ),
+          title: Text(
+            'Password reset',
+            style: FlutterFlowTheme.of(context).bodyLarge.override(
+                  font: GoogleFonts.manrope(
+                    fontWeight:
+                        FlutterFlowTheme.of(context).bodyLarge.fontWeight,
+                    fontStyle: FlutterFlowTheme.of(context).bodyLarge.fontStyle,
+                  ),
+                  letterSpacing: 0.0,
+                  fontWeight: FlutterFlowTheme.of(context).bodyLarge.fontWeight,
+                  fontStyle: FlutterFlowTheme.of(context).bodyLarge.fontStyle,
+                ),
+          ),
+          actions: [],
+          centerTitle: true,
+          toolbarHeight: 56.0,
+          elevation: 1.0,
+        ),
+      ),
       body: Align(
         alignment: AlignmentDirectional(0.0, -1.0),
         child: Padding(
@@ -171,21 +210,21 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget> {
                           fillColor:
                               FlutterFlowTheme.of(context).secondaryBackground,
                         ),
-                        style: FlutterFlowTheme.of(context).bodyLarge.override(
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
                               font: GoogleFonts.manrope(
                                 fontWeight: FlutterFlowTheme.of(context)
-                                    .bodyLarge
+                                    .bodyMedium
                                     .fontWeight,
                                 fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyLarge
+                                    .bodyMedium
                                     .fontStyle,
                               ),
                               letterSpacing: 0.0,
                               fontWeight: FlutterFlowTheme.of(context)
-                                  .bodyLarge
+                                  .bodyMedium
                                   .fontWeight,
                               fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyLarge
+                                  .bodyMedium
                                   .fontStyle,
                             ),
                         textAlign: TextAlign.start,

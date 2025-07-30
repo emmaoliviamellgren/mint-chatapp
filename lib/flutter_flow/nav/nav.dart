@@ -75,16 +75,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       debugLogDiagnostics: true,
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
-      errorBuilder: (context, state) => appStateNotifier.loggedIn
-          ? UserDashboardWidget()
-          : LandingPageWidget(),
+      errorBuilder: (context, state) =>
+          appStateNotifier.loggedIn ? ChatWidget() : LandingPageWidget(),
       routes: [
         FFRoute(
           name: '_initialize',
           path: '/',
-          builder: (context, _) => appStateNotifier.loggedIn
-              ? UserDashboardWidget()
-              : LandingPageWidget(),
+          builder: (context, _) =>
+              appStateNotifier.loggedIn ? ChatWidget() : LandingPageWidget(),
         ),
         FFRoute(
           name: LoginWidget.routeName,
@@ -117,9 +115,34 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => ProfileSettingsWidget(),
         ),
         FFRoute(
-          name: CreateProfileWidget.routeName,
-          path: CreateProfileWidget.routePath,
-          builder: (context, params) => CreateProfileWidget(),
+          name: CompleteProfileWidget.routeName,
+          path: CompleteProfileWidget.routePath,
+          builder: (context, params) => CompleteProfileWidget(),
+        ),
+        FFRoute(
+          name: CreateProfileWithPhotoWidget.routeName,
+          path: CreateProfileWithPhotoWidget.routePath,
+          builder: (context, params) => CreateProfileWithPhotoWidget(),
+        ),
+        FFRoute(
+          name: ChatWidget.routeName,
+          path: ChatWidget.routePath,
+          builder: (context, params) => ChatWidget(),
+        ),
+        FFRoute(
+          name: EditProfileWidget.routeName,
+          path: EditProfileWidget.routePath,
+          builder: (context, params) => EditProfileWidget(),
+        ),
+        FFRoute(
+          name: ChatUIOnlyWidget.routeName,
+          path: ChatUIOnlyWidget.routePath,
+          builder: (context, params) => ChatUIOnlyWidget(),
+        ),
+        FFRoute(
+          name: TestWidget.routeName,
+          path: TestWidget.routePath,
+          builder: (context, params) => TestWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

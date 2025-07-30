@@ -629,8 +629,7 @@ class _LandingPageWidgetState extends State<LandingPageWidget>
                                   curve: Curves.ease,
                                 );
                               } else {
-                                context
-                                    .pushNamed(CreateProfileWidget.routeName);
+                                context.pushNamed(LoginWidget.routeName);
                               }
                             },
                             text: valueOrDefault<String>(

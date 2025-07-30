@@ -4,6 +4,10 @@ import 'register_widget.dart' show RegisterWidget;
 import 'package:flutter/material.dart';
 
 class RegisterModel extends FlutterFlowModel<RegisterWidget> {
+  ///  Local state fields for this page.
+
+  bool? passwordMatch = true;
+
   ///  State fields for stateful widgets in this page.
 
   final formKey = GlobalKey<FormState>();
@@ -11,11 +15,32 @@ class RegisterModel extends FlutterFlowModel<RegisterWidget> {
   FocusNode? eMailInputFocusNode;
   TextEditingController? eMailInputTextController;
   String? Function(BuildContext, String?)? eMailInputTextControllerValidator;
+  String? _eMailInputTextControllerValidator(
+      BuildContext context, String? val) {
+    if (val == null || val.isEmpty) {
+      return 'E-mail is required';
+    }
+
+    if (!RegExp(kTextValidatorEmailRegex).hasMatch(val)) {
+      return 'Has to be a valid email address.';
+    }
+    return null;
+  }
+
   // State field(s) for PasswordInput widget.
   FocusNode? passwordInputFocusNode;
   TextEditingController? passwordInputTextController;
   late bool passwordInputVisibility;
   String? Function(BuildContext, String?)? passwordInputTextControllerValidator;
+  String? _passwordInputTextControllerValidator(
+      BuildContext context, String? val) {
+    if (val == null || val.isEmpty) {
+      return 'Password is required';
+    }
+
+    return null;
+  }
+
   // State field(s) for ConfirmPassword widget.
   FocusNode? confirmPasswordFocusNode;
   TextEditingController? confirmPasswordTextController;
@@ -25,7 +50,10 @@ class RegisterModel extends FlutterFlowModel<RegisterWidget> {
 
   @override
   void initState(BuildContext context) {
+    eMailInputTextControllerValidator = _eMailInputTextControllerValidator;
     passwordInputVisibility = false;
+    passwordInputTextControllerValidator =
+        _passwordInputTextControllerValidator;
     confirmPasswordVisibility = false;
   }
 
