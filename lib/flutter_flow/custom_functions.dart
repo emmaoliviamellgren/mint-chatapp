@@ -90,8 +90,8 @@ String generateUserId() {
 }
 
 dynamic createMessage(
-  String text,
-  String sender,
+  String? text,
+  String? sender,
   DateTime? timestamp,
 ) {
   final now = timestamp ?? DateTime.now();
