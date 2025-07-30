@@ -2,10 +2,13 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
+import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'register_model.dart';
 export 'register_model.dart';
 
@@ -48,6 +51,8 @@ class _RegisterWidgetState extends State<RegisterWidget> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FFAppState>();
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -67,6 +72,57 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Builder(
+                    builder: (context) {
+                      if (FFAppState().hasFirebaseError) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: FlutterFlowTheme.of(context).error,
+                              size: 16.0,
+                            ),
+                            Text(
+                              FFAppState().firebaseErrorMessage,
+                              style: FlutterFlowTheme.of(context)
+                                  .labelMedium
+                                  .override(
+                                    font: GoogleFonts.manrope(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .fontStyle,
+                                    ),
+                                    color: FlutterFlowTheme.of(context).error,
+                                    fontSize: 13.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .fontStyle,
+                                  ),
+                            ),
+                          ].divide(SizedBox(width: 12.0)),
+                        );
+                      } else {
+                        return Container(
+                          width: 1.0,
+                          height: 1.0,
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(context)
+                                .secondaryBackground,
+                          ),
+                        );
+                      }
+                    },
+                  ),
                   Align(
                     alignment: AlignmentDirectional(0.0, 0.0),
                     child: Padding(
@@ -127,7 +183,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                               ),
                             ]
                                 .divide(SizedBox(height: 5.0))
-                                .addToEnd(SizedBox(height: 10.0)),
+                                .addToEnd(SizedBox(height: 24.0)),
                           ),
                           Form(
                             key: _model.formKey,
@@ -232,26 +288,26 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                           .secondaryBackground,
                                     ),
                                     style: FlutterFlowTheme.of(context)
-                                        .bodyLarge
+                                        .bodyMedium
                                         .override(
                                           font: GoogleFonts.manrope(
                                             fontWeight:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontWeight,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontStyle,
                                           ),
                                           letterSpacing: 0.0,
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                     textAlign: TextAlign.start,
@@ -266,6 +322,38 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                   controller:
                                       _model.passwordInputTextController,
                                   focusNode: _model.passwordInputFocusNode,
+                                  onChanged: (_) => EasyDebounce.debounce(
+                                    '_model.passwordInputTextController',
+                                    Duration(milliseconds: 2000),
+                                    () async {
+                                      if (_model.passwordInputTextController
+                                              .text ==
+                                          _model.confirmPasswordTextController
+                                              .text) {
+                                        _model.passwordMatch = true;
+                                        safeSetState(() {});
+                                        return;
+                                      } else {
+                                        _model.passwordMatch = false;
+                                        safeSetState(() {});
+                                        return;
+                                      }
+                                    },
+                                  ),
+                                  onFieldSubmitted: (_) async {
+                                    if (_model
+                                            .passwordInputTextController.text ==
+                                        _model.confirmPasswordTextController
+                                            .text) {
+                                      _model.passwordMatch = true;
+                                      safeSetState(() {});
+                                      return;
+                                    } else {
+                                      _model.passwordMatch = false;
+                                      safeSetState(() {});
+                                      return;
+                                    }
+                                  },
                                   autofocus: false,
                                   obscureText: !_model.passwordInputVisibility,
                                   decoration: InputDecoration(
@@ -369,24 +457,24 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
@@ -400,6 +488,38 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                   controller:
                                       _model.confirmPasswordTextController,
                                   focusNode: _model.confirmPasswordFocusNode,
+                                  onChanged: (_) => EasyDebounce.debounce(
+                                    '_model.confirmPasswordTextController',
+                                    Duration(milliseconds: 2000),
+                                    () async {
+                                      if (_model.passwordInputTextController
+                                              .text ==
+                                          _model.confirmPasswordTextController
+                                              .text) {
+                                        _model.passwordMatch = true;
+                                        safeSetState(() {});
+                                        return;
+                                      } else {
+                                        _model.passwordMatch = false;
+                                        safeSetState(() {});
+                                        return;
+                                      }
+                                    },
+                                  ),
+                                  onFieldSubmitted: (_) async {
+                                    if (_model
+                                            .passwordInputTextController.text ==
+                                        _model.confirmPasswordTextController
+                                            .text) {
+                                      _model.passwordMatch = true;
+                                      safeSetState(() {});
+                                      return;
+                                    } else {
+                                      _model.passwordMatch = false;
+                                      safeSetState(() {});
+                                      return;
+                                    }
+                                  },
                                   autofocus: false,
                                   obscureText:
                                       !_model.confirmPasswordVisibility,
@@ -504,24 +624,24 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
@@ -531,50 +651,152 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                       .confirmPasswordTextControllerValidator
                                       .asValidator(context),
                                 ),
-                              ].divide(SizedBox(height: 12.0)),
+                              ]
+                                  .divide(SizedBox(height: 12.0))
+                                  .addToEnd(SizedBox(height: 12.0)),
                             ),
                           ),
-                          FFButtonWidget(
-                            onPressed: () async {
-                              GoRouter.of(context).prepareAuthEvent();
-                              if (_model.passwordInputTextController.text !=
-                                  _model.confirmPasswordTextController.text) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Passwords don\'t match!',
+                          Builder(
+                            builder: (context) {
+                              if (!_model.passwordMatch!) {
+                                return Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: FlutterFlowTheme.of(context).error,
+                                      size: 16.0,
                                     ),
-                                  ),
+                                    Text(
+                                      'Password does not match',
+                                      style: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .override(
+                                            font: GoogleFonts.manrope(
+                                              fontWeight:
+                                                  FlutterFlowTheme.of(context)
+                                                      .labelMedium
+                                                      .fontWeight,
+                                              fontStyle:
+                                                  FlutterFlowTheme.of(context)
+                                                      .labelMedium
+                                                      .fontStyle,
+                                            ),
+                                            color: FlutterFlowTheme.of(context)
+                                                .error,
+                                            fontSize: 13.0,
+                                            letterSpacing: 0.0,
+                                            fontWeight:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelMedium
+                                                    .fontWeight,
+                                            fontStyle:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelMedium
+                                                    .fontStyle,
+                                          ),
+                                    ),
+                                  ].divide(SizedBox(width: 12.0)),
                                 );
-                                return;
+                              } else {
+                                return Container(
+                                  width: 1.0,
+                                  height: 1.0,
+                                  decoration: BoxDecoration(),
+                                );
                               }
-
-                              final user =
-                                  await authManager.createAccountWithEmail(
-                                context,
-                                _model.eMailInputTextController.text,
-                                _model.passwordInputTextController.text,
-                              );
-                              if (user == null) {
-                                return;
-                              }
-
-                              context.goNamedAuth(UserDashboardWidget.routeName,
-                                  context.mounted);
                             },
-                            text: 'Sign up',
-                            options: FFButtonOptions(
-                              width: double.infinity,
-                              height: 48.0,
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  16.0, 0.0, 16.0, 0.0),
-                              iconPadding: EdgeInsetsDirectional.fromSTEB(
-                                  0.0, 0.0, 0.0, 0.0),
-                              color: FlutterFlowTheme.of(context).primary,
-                              textStyle: FlutterFlowTheme.of(context)
-                                  .titleMedium
-                                  .override(
-                                    font: GoogleFonts.manrope(
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                0.0, 12.0, 0.0, 0.0),
+                            child: FFButtonWidget(
+                              onPressed: !_model.passwordMatch!
+                                  ? null
+                                  : () async {
+                                      // Validate register form
+                                      if (_model.formKey.currentState == null ||
+                                          !_model.formKey.currentState!
+                                              .validate()) {
+                                        return;
+                                      }
+                                      // Start loading
+                                      FFAppState().isAuthLoading = true;
+                                      FFAppState().hasFirebaseError = false;
+                                      FFAppState().firebaseErrorMessage = '';
+                                      safeSetState(() {});
+                                      // set Firebase data
+                                      await actions.handleFirebaseAuth(
+                                        _model.eMailInputTextController.text,
+                                        _model.passwordInputTextController.text,
+                                        true,
+                                      );
+                                      // Let POST-request complete
+                                      await Future.delayed(
+                                        Duration(
+                                          milliseconds: 1000,
+                                        ),
+                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'User ID:${currentUserUid}',
+                                            style: TextStyle(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
+                                            ),
+                                          ),
+                                          duration:
+                                              Duration(milliseconds: 4000),
+                                          backgroundColor:
+                                              FlutterFlowTheme.of(context)
+                                                  .secondary,
+                                        ),
+                                      );
+                                      await Future.delayed(
+                                        Duration(
+                                          milliseconds: 4000,
+                                        ),
+                                      );
+                                      if (!(!FFAppState().hasFirebaseError &&
+                                          (currentUserReference != null))) {
+                                        return;
+                                      }
+                                      if ((currentUserDisplayName == '') ||
+                                          (currentUserPhoto == '')) {
+                                        context.pushNamed(
+                                            CompleteProfileWidget.routeName);
+                                      } else {
+                                        context.pushNamed(
+                                            UserDashboardWidget.routeName);
+                                      }
+                                    },
+                              text: 'Sign up',
+                              options: FFButtonOptions(
+                                width: double.infinity,
+                                height: 48.0,
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 0.0, 16.0, 0.0),
+                                iconPadding: EdgeInsetsDirectional.fromSTEB(
+                                    0.0, 0.0, 0.0, 0.0),
+                                color: FlutterFlowTheme.of(context).primary,
+                                textStyle: FlutterFlowTheme.of(context)
+                                    .titleMedium
+                                    .override(
+                                      font: GoogleFonts.manrope(
+                                        fontWeight: FlutterFlowTheme.of(context)
+                                            .titleMedium
+                                            .fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(context)
+                                            .titleMedium
+                                            .fontStyle,
+                                      ),
+                                      color: FlutterFlowTheme.of(context).info,
+                                      letterSpacing: 0.0,
                                       fontWeight: FlutterFlowTheme.of(context)
                                           .titleMedium
                                           .fontWeight,
@@ -582,59 +804,59 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                           .titleMedium
                                           .fontStyle,
                                     ),
-                                    color: FlutterFlowTheme.of(context).info,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontStyle,
-                                  ),
-                              elevation: 2.0,
-                              borderRadius: BorderRadius.circular(8.0),
+                                elevation: 2.0,
+                                borderRadius: BorderRadius.circular(8.0),
+                                disabledColor:
+                                    FlutterFlowTheme.of(context).primaryMuted,
+                              ),
+                              showLoadingIndicator: FFAppState().isAuthLoading,
                             ),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 1.0,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFF333333),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                0.0, 24.0, 0.0, 24.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 1.0,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF333333),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Text(
-                                'OR',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodySmall
-                                    .override(
-                                      font: GoogleFonts.manrope(
+                                Text(
+                                  'OR',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodySmall
+                                      .override(
+                                        font: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.w500,
+                                          fontStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodySmall
+                                                  .fontStyle,
+                                        ),
+                                        color: Color(0xFF808080),
+                                        letterSpacing: 0.0,
                                         fontWeight: FontWeight.w500,
                                         fontStyle: FlutterFlowTheme.of(context)
                                             .bodySmall
                                             .fontStyle,
                                       ),
-                                      color: Color(0xFF808080),
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontStyle,
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    height: 1.0,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF333333),
                                     ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  height: 1.0,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFF333333),
                                   ),
                                 ),
-                              ),
-                            ].divide(SizedBox(width: 16.0)),
+                              ].divide(SizedBox(width: 16.0)),
+                            ),
                           ),
                           Column(
                             mainAxisSize: MainAxisSize.max,
@@ -642,18 +864,30 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                               isAndroid
                                   ? Container()
                                   : FFButtonWidget(
-                                      onPressed: () async {
-                                        GoRouter.of(context).prepareAuthEvent();
-                                        final user = await authManager
-                                            .signInWithApple(context);
-                                        if (user == null) {
-                                          return;
-                                        }
+                                      onPressed: FFAppState()
+                                              .isAppleButtonDisabled
+                                          ? null
+                                          : () async {
+                                              // Clear auth errors
+                                              FFAppState().hasFirebaseError =
+                                                  false;
+                                              FFAppState()
+                                                  .firebaseErrorMessage = '';
+                                              FFAppState().isAuthLoading =
+                                                  false;
+                                              safeSetState(() {});
+                                              GoRouter.of(context)
+                                                  .prepareAuthEvent();
+                                              final user = await authManager
+                                                  .signInWithApple(context);
+                                              if (user == null) {
+                                                return;
+                                              }
 
-                                        context.goNamedAuth(
-                                            UserDashboardWidget.routeName,
-                                            context.mounted);
-                                      },
+                                              context.goNamedAuth(
+                                                  ChatWidget.routeName,
+                                                  context.mounted);
+                                            },
                                       text: 'Continue with Apple',
                                       icon: Icon(
                                         Icons.apple_outlined,
@@ -697,16 +931,28 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                             ),
                                         elevation: 0.0,
                                         borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .primary,
+                                          color: valueOrDefault<Color>(
+                                            !FFAppState().isAppleButtonDisabled
+                                                ? FlutterFlowTheme.of(context)
+                                                    .primary
+                                                : Color(0x606D5FED),
+                                            FlutterFlowTheme.of(context)
+                                                .primary,
+                                          ),
                                           width: 1.5,
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(8.0),
+                                        disabledTextColor: Color(0x696D5FED),
                                       ),
                                     ),
                               FFButtonWidget(
                                 onPressed: () async {
+                                  // Clear auth errors
+                                  FFAppState().hasFirebaseError = false;
+                                  FFAppState().firebaseErrorMessage = '';
+                                  FFAppState().isAuthLoading = false;
+                                  safeSetState(() {});
                                   GoRouter.of(context).prepareAuthEvent();
                                   final user = await authManager
                                       .signInWithGoogle(context);
@@ -715,8 +961,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                                   }
 
                                   context.goNamedAuth(
-                                      UserDashboardWidget.routeName,
-                                      context.mounted);
+                                      ChatWidget.routeName, context.mounted);
                                 },
                                 text: 'Continue with Google',
                                 icon: FaIcon(
@@ -765,7 +1010,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                               ),
                             ].divide(SizedBox(height: 12.0)),
                           ),
-                        ].divide(SizedBox(height: 24.0)),
+                        ],
                       ),
                     ),
                   ),
@@ -798,6 +1043,12 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                       ),
                       FFButtonWidget(
                         onPressed: () async {
+                          // Clear auth errors
+                          FFAppState().hasFirebaseError = false;
+                          FFAppState().firebaseErrorMessage = '';
+                          FFAppState().isAuthLoading = false;
+                          safeSetState(() {});
+
                           context.pushNamed(LoginWidget.routeName);
                         },
                         text: 'Log in',

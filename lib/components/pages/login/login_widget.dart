@@ -2,10 +2,12 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'login_model.dart';
 export 'login_model.dart';
 
@@ -45,6 +47,8 @@ class _LoginWidgetState extends State<LoginWidget> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FFAppState>();
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -64,6 +68,57 @@ class _LoginWidgetState extends State<LoginWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Builder(
+                    builder: (context) {
+                      if (FFAppState().hasFirebaseError) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: FlutterFlowTheme.of(context).error,
+                              size: 16.0,
+                            ),
+                            Text(
+                              FFAppState().firebaseErrorMessage,
+                              style: FlutterFlowTheme.of(context)
+                                  .labelMedium
+                                  .override(
+                                    font: GoogleFonts.manrope(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .fontStyle,
+                                    ),
+                                    color: FlutterFlowTheme.of(context).error,
+                                    fontSize: 13.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .fontStyle,
+                                  ),
+                            ),
+                          ].divide(SizedBox(width: 12.0)),
+                        );
+                      } else {
+                        return Container(
+                          width: 1.0,
+                          height: 1.0,
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(context)
+                                .secondaryBackground,
+                          ),
+                        );
+                      }
+                    },
+                  ),
                   Align(
                     alignment: AlignmentDirectional(0.0, 0.0),
                     child: Padding(
@@ -229,26 +284,26 @@ class _LoginWidgetState extends State<LoginWidget> {
                                           .secondaryBackground,
                                     ),
                                     style: FlutterFlowTheme.of(context)
-                                        .bodyLarge
+                                        .bodyMedium
                                         .override(
                                           font: GoogleFonts.manrope(
                                             fontWeight:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontWeight,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
-                                                    .bodyLarge
+                                                    .bodyMedium
                                                     .fontStyle,
                                           ),
                                           letterSpacing: 0.0,
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                     textAlign: TextAlign.start,
@@ -366,24 +421,24 @@ class _LoginWidgetState extends State<LoginWidget> {
                                     ),
                                   ),
                                   style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
+                                      .bodyMedium
                                       .override(
                                         font: GoogleFonts.manrope(
                                           fontWeight:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontWeight,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
-                                                  .bodyLarge
+                                                  .bodyMedium
                                                   .fontStyle,
                                         ),
                                         letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontWeight,
                                         fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
+                                            .bodyMedium
                                             .fontStyle,
                                       ),
                                   textAlign: TextAlign.start,
@@ -406,6 +461,12 @@ class _LoginWidgetState extends State<LoginWidget> {
                                 hoverColor: Colors.transparent,
                                 highlightColor: Colors.transparent,
                                 onTap: () async {
+                                  // Clear auth errors
+                                  FFAppState().hasFirebaseError = false;
+                                  FFAppState().firebaseErrorMessage = '';
+                                  FFAppState().isAuthLoading = false;
+                                  safeSetState(() {});
+
                                   context.pushNamed(
                                       ForgotPasswordWidget.routeName);
                                 },
@@ -435,36 +496,39 @@ class _LoginWidgetState extends State<LoginWidget> {
                           ),
                           FFButtonWidget(
                             onPressed: () async {
-                              GoRouter.of(context).prepareAuthEvent();
-
-                              final user = await authManager.signInWithEmail(
-                                context,
-                                _model.eMailInputTextController.text,
-                                _model.passwordInputTextController.text,
-                              );
-                              if (user == null) {
+                              // Validate register form
+                              if (_model.formKey.currentState == null ||
+                                  !_model.formKey.currentState!.validate()) {
                                 return;
                               }
-
-                              if (currentUserUid != '') {
-                                context.pushNamedAuth(
-                                    UserDashboardWidget.routeName,
-                                    context.mounted);
+                              // Start loading
+                              FFAppState().isAuthLoading = true;
+                              FFAppState().hasFirebaseError = false;
+                              FFAppState().firebaseErrorMessage = '';
+                              safeSetState(() {});
+                              // set Firebase data
+                              await actions.handleFirebaseAuth(
+                                _model.eMailInputTextController.text,
+                                _model.passwordInputTextController.text,
+                                false,
+                              );
+                              // Let POST-request complete
+                              await Future.delayed(
+                                Duration(
+                                  milliseconds: 1000,
+                                ),
+                              );
+                              if (!(!FFAppState().hasFirebaseError &&
+                                  (currentUserReference != null))) {
+                                return;
+                              }
+                              if ((currentUserDisplayName == '') ||
+                                  (currentUserPhoto == '')) {
+                                context
+                                    .pushNamed(CompleteProfileWidget.routeName);
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Error: can not log in user',
-                                      style: TextStyle(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryText,
-                                      ),
-                                    ),
-                                    duration: Duration(milliseconds: 4000),
-                                    backgroundColor:
-                                        FlutterFlowTheme.of(context).secondary,
-                                  ),
-                                );
+                                context
+                                    .pushNamed(UserDashboardWidget.routeName);
                               }
                             },
                             text: 'Continue',
@@ -547,18 +611,30 @@ class _LoginWidgetState extends State<LoginWidget> {
                               isAndroid
                                   ? Container()
                                   : FFButtonWidget(
-                                      onPressed: () async {
-                                        GoRouter.of(context).prepareAuthEvent();
-                                        final user = await authManager
-                                            .signInWithApple(context);
-                                        if (user == null) {
-                                          return;
-                                        }
+                                      onPressed: FFAppState()
+                                              .isAppleButtonDisabled
+                                          ? null
+                                          : () async {
+                                              // Clear auth errors
+                                              FFAppState().hasFirebaseError =
+                                                  false;
+                                              FFAppState()
+                                                  .firebaseErrorMessage = '';
+                                              FFAppState().isAuthLoading =
+                                                  false;
+                                              safeSetState(() {});
+                                              GoRouter.of(context)
+                                                  .prepareAuthEvent();
+                                              final user = await authManager
+                                                  .signInWithApple(context);
+                                              if (user == null) {
+                                                return;
+                                              }
 
-                                        context.goNamedAuth(
-                                            UserDashboardWidget.routeName,
-                                            context.mounted);
-                                      },
+                                              context.goNamedAuth(
+                                                  ChatWidget.routeName,
+                                                  context.mounted);
+                                            },
                                       text: 'Continue with Apple',
                                       icon: Icon(
                                         Icons.apple_outlined,
@@ -602,26 +678,44 @@ class _LoginWidgetState extends State<LoginWidget> {
                                             ),
                                         elevation: 0.0,
                                         borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .primary,
+                                          color: valueOrDefault<Color>(
+                                            !FFAppState().isAppleButtonDisabled
+                                                ? FlutterFlowTheme.of(context)
+                                                    .primary
+                                                : Color(0x606D5FED),
+                                            FlutterFlowTheme.of(context)
+                                                .primary,
+                                          ),
                                           width: 1.5,
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(8.0),
+                                        disabledTextColor: Color(0x696D5FED),
                                       ),
                                     ),
                               FFButtonWidget(
                                 onPressed: () async {
+                                  // Clear auth errors
+                                  FFAppState().hasFirebaseError = false;
+                                  FFAppState().firebaseErrorMessage = '';
+                                  FFAppState().isAuthLoading = false;
+                                  safeSetState(() {});
                                   GoRouter.of(context).prepareAuthEvent();
                                   final user = await authManager
                                       .signInWithGoogle(context);
                                   if (user == null) {
                                     return;
                                   }
-
-                                  context.goNamedAuth(
-                                      UserDashboardWidget.routeName,
-                                      context.mounted);
+                                  if ((currentUserDisplayName == '') ||
+                                      (currentUserPhoto == '')) {
+                                    context.pushNamedAuth(
+                                        CompleteProfileWidget.routeName,
+                                        context.mounted);
+                                  } else {
+                                    context.pushNamedAuth(
+                                        UserDashboardWidget.routeName,
+                                        context.mounted);
+                                  }
                                 },
                                 text: 'Continue with Google',
                                 icon: FaIcon(
@@ -703,6 +797,12 @@ class _LoginWidgetState extends State<LoginWidget> {
                       ),
                       FFButtonWidget(
                         onPressed: () async {
+                          // Clear auth errors
+                          FFAppState().hasFirebaseError = false;
+                          FFAppState().firebaseErrorMessage = '';
+                          FFAppState().isAuthLoading = false;
+                          safeSetState(() {});
+
                           context.pushNamed(RegisterWidget.routeName);
                         },
                         text: 'Sign up',
