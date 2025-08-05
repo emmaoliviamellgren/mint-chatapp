@@ -6,4 +6,5 @@ abstract class FFAppConstants {
   static const List<String> filterOptions = ['All', 'Popular', 'Favorite'];
   static const String userSender = 'user';
   static const String botSender = 'bot';
+  static const String typingSender = 'typing';
 }

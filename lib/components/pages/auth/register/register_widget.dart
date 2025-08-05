@@ -4,38 +4,42 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
+import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'login_model.dart';
-export 'login_model.dart';
+import 'register_model.dart';
+export 'register_model.dart';
 
-class LoginWidget extends StatefulWidget {
-  const LoginWidget({super.key});
+class RegisterWidget extends StatefulWidget {
+  const RegisterWidget({super.key});
 
-  static String routeName = 'Login';
-  static String routePath = '/login';
+  static String routeName = 'Register';
+  static String routePath = '/register';
 
   @override
-  State<LoginWidget> createState() => _LoginWidgetState();
+  State<RegisterWidget> createState() => _RegisterWidgetState();
 }
 
-class _LoginWidgetState extends State<LoginWidget> {
-  late LoginModel _model;
+class _RegisterWidgetState extends State<RegisterWidget> {
+  late RegisterModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => LoginModel());
+    _model = createModel(context, () => RegisterModel());
 
     _model.eMailInputTextController ??= TextEditingController();
     _model.eMailInputFocusNode ??= FocusNode();
 
     _model.passwordInputTextController ??= TextEditingController();
     _model.passwordInputFocusNode ??= FocusNode();
+
+    _model.confirmPasswordTextController ??= TextEditingController();
+    _model.confirmPasswordFocusNode ??= FocusNode();
   }
 
   @override
@@ -134,7 +138,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Welcome back',
+                                'Register',
                                 style: FlutterFlowTheme.of(context)
                                     .displayLarge
                                     .override(
@@ -156,7 +160,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                                     ),
                               ),
                               Text(
-                                'Sign in to your account to continue',
+                                'Create an account to access features',
                                 style: FlutterFlowTheme.of(context)
                                     .titleSmall
                                     .override(
@@ -179,7 +183,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                               ),
                             ]
                                 .divide(SizedBox(height: 5.0))
-                                .addToEnd(SizedBox(height: 10.0)),
+                                .addToEnd(SizedBox(height: 24.0)),
                           ),
                           Form(
                             key: _model.formKey,
@@ -318,6 +322,38 @@ class _LoginWidgetState extends State<LoginWidget> {
                                   controller:
                                       _model.passwordInputTextController,
                                   focusNode: _model.passwordInputFocusNode,
+                                  onChanged: (_) => EasyDebounce.debounce(
+                                    '_model.passwordInputTextController',
+                                    Duration(milliseconds: 2000),
+                                    () async {
+                                      if (_model.passwordInputTextController
+                                              .text ==
+                                          _model.confirmPasswordTextController
+                                              .text) {
+                                        _model.passwordMatch = true;
+                                        safeSetState(() {});
+                                        return;
+                                      } else {
+                                        _model.passwordMatch = false;
+                                        safeSetState(() {});
+                                        return;
+                                      }
+                                    },
+                                  ),
+                                  onFieldSubmitted: (_) async {
+                                    if (_model
+                                            .passwordInputTextController.text ==
+                                        _model.confirmPasswordTextController
+                                            .text) {
+                                      _model.passwordMatch = true;
+                                      safeSetState(() {});
+                                      return;
+                                    } else {
+                                      _model.passwordMatch = false;
+                                      safeSetState(() {});
+                                      return;
+                                    }
+                                  },
                                   autofocus: false,
                                   obscureText: !_model.passwordInputVisibility,
                                   decoration: InputDecoration(
@@ -448,30 +484,331 @@ class _LoginWidgetState extends State<LoginWidget> {
                                       .passwordInputTextControllerValidator
                                       .asValidator(context),
                                 ),
-                              ].divide(SizedBox(height: 12.0)),
+                                TextFormField(
+                                  controller:
+                                      _model.confirmPasswordTextController,
+                                  focusNode: _model.confirmPasswordFocusNode,
+                                  onChanged: (_) => EasyDebounce.debounce(
+                                    '_model.confirmPasswordTextController',
+                                    Duration(milliseconds: 2000),
+                                    () async {
+                                      if (_model.passwordInputTextController
+                                              .text ==
+                                          _model.confirmPasswordTextController
+                                              .text) {
+                                        _model.passwordMatch = true;
+                                        safeSetState(() {});
+                                        return;
+                                      } else {
+                                        _model.passwordMatch = false;
+                                        safeSetState(() {});
+                                        return;
+                                      }
+                                    },
+                                  ),
+                                  onFieldSubmitted: (_) async {
+                                    if (_model
+                                            .passwordInputTextController.text ==
+                                        _model.confirmPasswordTextController
+                                            .text) {
+                                      _model.passwordMatch = true;
+                                      safeSetState(() {});
+                                      return;
+                                    } else {
+                                      _model.passwordMatch = false;
+                                      safeSetState(() {});
+                                      return;
+                                    }
+                                  },
+                                  autofocus: false,
+                                  obscureText:
+                                      !_model.confirmPasswordVisibility,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    labelStyle: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          font: GoogleFonts.manrope(
+                                            fontWeight:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .fontWeight,
+                                            fontStyle:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .fontStyle,
+                                          ),
+                                          letterSpacing: 0.0,
+                                          fontWeight:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .fontWeight,
+                                          fontStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .fontStyle,
+                                        ),
+                                    hintText: 'Confirm password',
+                                    hintStyle: FlutterFlowTheme.of(context)
+                                        .labelLarge
+                                        .override(
+                                          font: GoogleFonts.manrope(
+                                            fontWeight:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelLarge
+                                                    .fontWeight,
+                                            fontStyle:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelLarge
+                                                    .fontStyle,
+                                          ),
+                                          letterSpacing: 0.0,
+                                          fontWeight:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelLarge
+                                                  .fontWeight,
+                                          fontStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelLarge
+                                                  .fontStyle,
+                                        ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(context)
+                                            .alternate,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color:
+                                            FlutterFlowTheme.of(context).error,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color:
+                                            FlutterFlowTheme.of(context).error,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    filled: true,
+                                    fillColor: FlutterFlowTheme.of(context)
+                                        .secondaryBackground,
+                                    suffixIcon: InkWell(
+                                      onTap: () => safeSetState(
+                                        () => _model.confirmPasswordVisibility =
+                                            !_model.confirmPasswordVisibility,
+                                      ),
+                                      focusNode: FocusNode(skipTraversal: true),
+                                      child: Icon(
+                                        _model.confirmPasswordVisibility
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        font: GoogleFonts.manrope(
+                                          fontWeight:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .fontWeight,
+                                          fontStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .fontStyle,
+                                        ),
+                                        letterSpacing: 0.0,
+                                        fontWeight: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .fontStyle,
+                                      ),
+                                  textAlign: TextAlign.start,
+                                  cursorColor:
+                                      FlutterFlowTheme.of(context).primaryText,
+                                  validator: _model
+                                      .confirmPasswordTextControllerValidator
+                                      .asValidator(context),
+                                ),
+                              ]
+                                  .divide(SizedBox(height: 12.0))
+                                  .addToEnd(SizedBox(height: 12.0)),
                             ),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
-                                  // Clear auth errors
-                                  FFAppState().hasFirebaseError = false;
-                                  FFAppState().firebaseErrorMessage = '';
-                                  FFAppState().isAuthLoading = false;
-                                  safeSetState(() {});
-
-                                  context.pushNamed(
-                                      ForgotPasswordWidget.routeName);
-                                },
-                                child: Text(
-                                  'Forgot password?',
+                          Builder(
+                            builder: (context) {
+                              if (!_model.passwordMatch!) {
+                                return Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: FlutterFlowTheme.of(context).error,
+                                      size: 16.0,
+                                    ),
+                                    Text(
+                                      'Password does not match',
+                                      style: FlutterFlowTheme.of(context)
+                                          .labelMedium
+                                          .override(
+                                            font: GoogleFonts.manrope(
+                                              fontWeight:
+                                                  FlutterFlowTheme.of(context)
+                                                      .labelMedium
+                                                      .fontWeight,
+                                              fontStyle:
+                                                  FlutterFlowTheme.of(context)
+                                                      .labelMedium
+                                                      .fontStyle,
+                                            ),
+                                            color: FlutterFlowTheme.of(context)
+                                                .error,
+                                            fontSize: 13.0,
+                                            letterSpacing: 0.0,
+                                            fontWeight:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelMedium
+                                                    .fontWeight,
+                                            fontStyle:
+                                                FlutterFlowTheme.of(context)
+                                                    .labelMedium
+                                                    .fontStyle,
+                                          ),
+                                    ),
+                                  ].divide(SizedBox(width: 12.0)),
+                                );
+                              } else {
+                                return Container(
+                                  width: 1.0,
+                                  height: 1.0,
+                                  decoration: BoxDecoration(),
+                                );
+                              }
+                            },
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                0.0, 12.0, 0.0, 0.0),
+                            child: FFButtonWidget(
+                              onPressed: !_model.passwordMatch!
+                                  ? null
+                                  : () async {
+                                      // Validate register form
+                                      if (_model.formKey.currentState == null ||
+                                          !_model.formKey.currentState!
+                                              .validate()) {
+                                        return;
+                                      }
+                                      // Start loading
+                                      FFAppState().hasFirebaseError = false;
+                                      FFAppState().firebaseErrorMessage = '';
+                                      safeSetState(() {});
+                                      // set Firebase data
+                                      await actions.handleFirebaseAuth(
+                                        _model.eMailInputTextController.text,
+                                        _model.passwordInputTextController.text,
+                                        true,
+                                      );
+                                      // Set Botpress data
+                                      await actions.botpressUserSetup();
+                                      // Let POST-request complete
+                                      await Future.delayed(
+                                        Duration(
+                                          milliseconds: 500,
+                                        ),
+                                      );
+                                      if (!(!FFAppState().hasFirebaseError &&
+                                          (currentUserReference != null))) {
+                                        return;
+                                      }
+                                      if ((currentUserDisplayName == '') ||
+                                          (currentUserPhoto == '')) {
+                                        context.pushNamed(
+                                            CompleteProfileWidget.routeName);
+                                      } else {
+                                        if (Navigator.of(context).canPop()) {
+                                          context.pop();
+                                        }
+                                        context.pushNamed(
+                                            UserDashboardWidget.routeName);
+                                      }
+                                    },
+                              text: 'Sign up',
+                              options: FFButtonOptions(
+                                width: double.infinity,
+                                height: 48.0,
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 0.0, 16.0, 0.0),
+                                iconPadding: EdgeInsetsDirectional.fromSTEB(
+                                    0.0, 0.0, 0.0, 0.0),
+                                color: FlutterFlowTheme.of(context).primary,
+                                textStyle: FlutterFlowTheme.of(context)
+                                    .titleMedium
+                                    .override(
+                                      font: GoogleFonts.manrope(
+                                        fontWeight: FlutterFlowTheme.of(context)
+                                            .titleMedium
+                                            .fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(context)
+                                            .titleMedium
+                                            .fontStyle,
+                                      ),
+                                      color: FlutterFlowTheme.of(context).info,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .titleMedium
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .titleMedium
+                                          .fontStyle,
+                                    ),
+                                elevation: 2.0,
+                                borderRadius: BorderRadius.circular(8.0),
+                                disabledColor:
+                                    FlutterFlowTheme.of(context).primaryMuted,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                0.0, 24.0, 0.0, 24.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 1.0,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF333333),
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'OR',
                                   style: FlutterFlowTheme.of(context)
                                       .bodySmall
                                       .override(
@@ -482,8 +819,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                                                   .bodySmall
                                                   .fontStyle,
                                         ),
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: Color(0xFF808080),
                                         letterSpacing: 0.0,
                                         fontWeight: FontWeight.w500,
                                         fontStyle: FlutterFlowTheme.of(context)
@@ -491,119 +827,16 @@ class _LoginWidgetState extends State<LoginWidget> {
                                             .fontStyle,
                                       ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          FFButtonWidget(
-                            onPressed: () async {
-                              // Validate register form
-                              if (_model.formKey.currentState == null ||
-                                  !_model.formKey.currentState!.validate()) {
-                                return;
-                              }
-                              // Start loading
-                              FFAppState().isAuthLoading = true;
-                              FFAppState().hasFirebaseError = false;
-                              FFAppState().firebaseErrorMessage = '';
-                              safeSetState(() {});
-                              // set Firebase data
-                              await actions.handleFirebaseAuth(
-                                _model.eMailInputTextController.text,
-                                _model.passwordInputTextController.text,
-                                false,
-                              );
-                              // Let POST-request complete
-                              await Future.delayed(
-                                Duration(
-                                  milliseconds: 1000,
-                                ),
-                              );
-                              if (!(!FFAppState().hasFirebaseError &&
-                                  (currentUserReference != null))) {
-                                return;
-                              }
-                              if ((currentUserDisplayName == '') ||
-                                  (currentUserPhoto == '')) {
-                                context
-                                    .pushNamed(CompleteProfileWidget.routeName);
-                              } else {
-                                context
-                                    .pushNamed(UserDashboardWidget.routeName);
-                              }
-                            },
-                            text: 'Continue',
-                            options: FFButtonOptions(
-                              width: double.infinity,
-                              height: 48.0,
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  16.0, 0.0, 16.0, 0.0),
-                              iconPadding: EdgeInsetsDirectional.fromSTEB(
-                                  0.0, 0.0, 0.0, 0.0),
-                              color: FlutterFlowTheme.of(context).primary,
-                              textStyle: FlutterFlowTheme.of(context)
-                                  .titleMedium
-                                  .override(
-                                    font: GoogleFonts.manrope(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .titleMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleMedium
-                                          .fontStyle,
+                                Expanded(
+                                  child: Container(
+                                    height: 1.0,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF333333),
                                     ),
-                                    color: FlutterFlowTheme.of(context).info,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontStyle,
                                   ),
-                              elevation: 2.0,
-                              borderRadius: BorderRadius.circular(8.0),
+                                ),
+                              ].divide(SizedBox(width: 16.0)),
                             ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 1.0,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFF333333),
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'OR',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodySmall
-                                    .override(
-                                      font: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF808080),
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontStyle,
-                                    ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  height: 1.0,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFF333333),
-                                  ),
-                                ),
-                              ),
-                            ].divide(SizedBox(width: 16.0)),
                           ),
                           Column(
                             mainAxisSize: MainAxisSize.max,
@@ -620,8 +853,6 @@ class _LoginWidgetState extends State<LoginWidget> {
                                                   false;
                                               FFAppState()
                                                   .firebaseErrorMessage = '';
-                                              FFAppState().isAuthLoading =
-                                                  false;
                                               safeSetState(() {});
                                               GoRouter.of(context)
                                                   .prepareAuthEvent();
@@ -632,7 +863,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                                               }
 
                                               context.goNamedAuth(
-                                                  ChatWidget.routeName,
+                                                  UserDashboardWidget.routeName,
                                                   context.mounted);
                                             },
                                       text: 'Continue with Apple',
@@ -698,7 +929,6 @@ class _LoginWidgetState extends State<LoginWidget> {
                                   // Clear auth errors
                                   FFAppState().hasFirebaseError = false;
                                   FFAppState().firebaseErrorMessage = '';
-                                  FFAppState().isAuthLoading = false;
                                   safeSetState(() {});
                                   GoRouter.of(context).prepareAuthEvent();
                                   final user = await authManager
@@ -706,12 +936,16 @@ class _LoginWidgetState extends State<LoginWidget> {
                                   if (user == null) {
                                     return;
                                   }
-                                  if ((currentUserDisplayName == '') ||
-                                      (currentUserPhoto == '')) {
+                                  // Set Botpress data
+                                  await actions.botpressUserSetup();
+                                  if (currentUserDisplayName == '') {
                                     context.pushNamedAuth(
                                         CompleteProfileWidget.routeName,
                                         context.mounted);
                                   } else {
+                                    if (Navigator.of(context).canPop()) {
+                                      context.pop();
+                                    }
                                     context.pushNamedAuth(
                                         UserDashboardWidget.routeName,
                                         context.mounted);
@@ -764,7 +998,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                               ),
                             ].divide(SizedBox(height: 12.0)),
                           ),
-                        ].divide(SizedBox(height: 24.0)),
+                        ],
                       ),
                     ),
                   ),
@@ -774,7 +1008,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Don\'t have an account? ',
+                        'Already have an account?',
                         textAlign: TextAlign.center,
                         style:
                             FlutterFlowTheme.of(context).titleMedium.override(
@@ -800,12 +1034,11 @@ class _LoginWidgetState extends State<LoginWidget> {
                           // Clear auth errors
                           FFAppState().hasFirebaseError = false;
                           FFAppState().firebaseErrorMessage = '';
-                          FFAppState().isAuthLoading = false;
                           safeSetState(() {});
 
-                          context.pushNamed(RegisterWidget.routeName);
+                          context.pushNamed(LoginWidget.routeName);
                         },
-                        text: 'Sign up',
+                        text: 'Log in',
                         options: FFButtonOptions(
                           width: double.infinity,
                           height: 44.0,

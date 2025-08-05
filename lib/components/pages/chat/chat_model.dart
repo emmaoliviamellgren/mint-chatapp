@@ -1,4 +1,6 @@
 import '/backend/api_requests/api_calls.dart';
+import '/backend/api_requests/api_manager.dart';
+import '/components/loader_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'chat_widget.dart' show ChatWidget;
@@ -6,42 +8,29 @@ import 'package:flutter/material.dart';
 
 class ChatModel extends FlutterFlowModel<ChatWidget> {
   ///  Local state fields for this page.
-  /// Messages between bot and user
-  List<dynamic> messages = [];
-  void addToMessages(dynamic item) => messages.add(item);
-  void removeFromMessages(dynamic item) => messages.remove(item);
-  void removeAtIndexFromMessages(int index) => messages.removeAt(index);
-  void insertAtIndexInMessages(int index, dynamic item) =>
-      messages.insert(index, item);
-  void updateMessagesAtIndex(int index, Function(dynamic) updateFn) =>
-      messages[index] = updateFn(messages[index]);
 
   String? currentMessage;
 
-  String? conversationId;
-
   bool isLoading = false;
 
-  String? userId;
-
-  List<dynamic> tempBotMessages = [];
-  void addToTempBotMessages(dynamic item) => tempBotMessages.add(item);
-  void removeFromTempBotMessages(dynamic item) => tempBotMessages.remove(item);
-  void removeAtIndexFromTempBotMessages(int index) =>
-      tempBotMessages.removeAt(index);
-  void insertAtIndexInTempBotMessages(int index, dynamic item) =>
-      tempBotMessages.insert(index, item);
-  void updateTempBotMessagesAtIndex(int index, Function(dynamic) updateFn) =>
-      tempBotMessages[index] = updateFn(tempBotMessages[index]);
-
-  String? userKey;
+  bool isSendingMessage = false;
 
   ///  State fields for stateful widgets in this page.
 
+  // Stores action output result for [Custom Action - checkBotpressUserStatus] action in Chat widget.
+  String? userStatusResult;
+  // Stores action output result for [Custom Action - getBotpressUserKey] action in Chat widget.
+  String? storedUserKeyResult;
   // Stores action output result for [Backend Call - API (createChatUser)] action in Chat widget.
-  ApiCallResponse? userResponse;
+  ApiCallResponse? createUserResult;
+  // Stores action output result for [Custom Action - getBotpressConversationId] action in Chat widget.
+  String? storedConversationId;
   // Stores action output result for [Backend Call - API (createChatConversation)] action in Chat widget.
-  ApiCallResponse? conversationResponse;
+  ApiCallResponse? createConversationResult;
+  // Stores action output result for [Backend Call - API (listChatMessages)] action in Chat widget.
+  ApiCallResponse? loadMessagesResult;
+  // Model for Loader component.
+  late LoaderModel loaderModel;
   // State field(s) for TextField widget.
   FocusNode? textFieldFocusNode;
   TextEditingController? textController;
@@ -50,10 +39,13 @@ class ChatModel extends FlutterFlowModel<ChatWidget> {
   ApiCallResponse? messageResponse;
 
   @override
-  void initState(BuildContext context) {}
+  void initState(BuildContext context) {
+    loaderModel = createModel(context, () => LoaderModel());
+  }
 
   @override
   void dispose() {
+    loaderModel.dispose();
     textFieldFocusNode?.dispose();
     textController?.dispose();
   }

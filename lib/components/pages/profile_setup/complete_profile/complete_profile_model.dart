@@ -4,9 +4,17 @@ import 'complete_profile_widget.dart' show CompleteProfileWidget;
 import 'package:flutter/material.dart';
 
 class CompleteProfileModel extends FlutterFlowModel<CompleteProfileWidget> {
+  ///  Local state fields for this page.
+
+  bool hasSelectedPhoto = false;
+
   ///  State fields for stateful widgets in this page.
 
   final formKey = GlobalKey<FormState>();
+  bool isDataUploading_selectedMediaResultInCompleteProfile = false;
+  FFUploadedFile uploadedLocalFile_selectedMediaResultInCompleteProfile =
+      FFUploadedFile(bytes: Uint8List.fromList([]));
+
   // State field(s) for FirstName widget.
   FocusNode? firstNameFocusNode;
   TextEditingController? firstNameTextController;
@@ -44,6 +52,11 @@ class CompleteProfileModel extends FlutterFlowModel<CompleteProfileWidget> {
 
     return null;
   }
+
+  bool isDataUploading_photoUploadResultFromCompleteProfile = false;
+  FFUploadedFile uploadedLocalFile_photoUploadResultFromCompleteProfile =
+      FFUploadedFile(bytes: Uint8List.fromList([]));
+  String uploadedFileUrl_photoUploadResultFromCompleteProfile = '';
 
   @override
   void initState(BuildContext context) {
