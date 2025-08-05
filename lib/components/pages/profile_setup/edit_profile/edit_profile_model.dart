@@ -1,4 +1,3 @@
-import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'edit_profile_widget.dart' show EditProfileWidget;
@@ -13,20 +12,22 @@ class EditProfileModel extends FlutterFlowModel<EditProfileWidget> {
 
   String? firstNameValue;
 
-  DocumentReference? userDocReference;
-
   String? lastNameValue;
 
   String? originalFirstName;
 
   String? originalLastName;
 
+  bool hasSelectedPhoto = false;
+
   ///  State fields for stateful widgets in this page.
 
-  // Stores action output result for [Firestore Query - Query a collection] action in EditProfile widget.
-  UsersRecord? currentUserDoc;
   // Stores action output result for [Custom Action - splitFullName] action in EditProfile widget.
   dynamic namePartsResult;
+  bool isDataUploading_selectedMediaResult = false;
+  FFUploadedFile uploadedLocalFile_selectedMediaResult =
+      FFUploadedFile(bytes: Uint8List.fromList([]));
+
   // State field(s) for Email widget.
   FocusNode? emailFocusNode;
   TextEditingController? emailTextController;
@@ -41,6 +42,10 @@ class EditProfileModel extends FlutterFlowModel<EditProfileWidget> {
   String? Function(BuildContext, String?)? lastNameTextControllerValidator;
   // Stores action output result for [Custom Action - combineNames] action in Button widget.
   String? combinedFullName;
+  bool isDataUploading_photoUploadResult = false;
+  FFUploadedFile uploadedLocalFile_photoUploadResult =
+      FFUploadedFile(bytes: Uint8List.fromList([]));
+  String uploadedFileUrl_photoUploadResult = '';
 
   @override
   void initState(BuildContext context) {}

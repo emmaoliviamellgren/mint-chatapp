@@ -8,92 +8,20 @@ export 'api_manager.dart' show ApiCallResponse;
 
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
 
-class InitializeBotPressConversationCall {
-  static Future<ApiCallResponse> call() async {
-    final ffApiRequestBody = '''
-{
-  "integrationName": "api",
-  "channel": "api",
-  "tags": {}
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'initializeBotPressConversation',
-      apiUrl: 'https://api.botpress.cloud/v1/chat/conversations',
-      callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer bp_pat_0BlMwWjwbU35hl6tZIl4c3beAnshE4zZtdVc',
-        'x-bot-id': '2c28bc34-3bae-4112-ae29-978eb231dee6',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-}
-
-class SendMessageToBotPressCall {
-  static Future<ApiCallResponse> call({
-    String? conversationId = '',
-    String? message = '',
-    String? userId = '',
-  }) async {
-    final ffApiRequestBody = '''
-{
-  "conversationId": "\$conversationId",
-  "payload": {
-    "type": "text",
-    "text": "\$message"
-  },
-  "channel": "api",
-  "tags": {},
-  "userId": "\$userId"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'sendMessageToBotPress',
-      apiUrl: 'https://api.botpress.cloud/v1/chat/messages',
-      callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer 2c28bc34-3bae-4112-ae29-978eb231dee6',
-        'x-bot-id': '2c28bc34-3bae-4112-ae29-978eb231dee6',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-}
-
 class CreateChatUserCall {
   static Future<ApiCallResponse> call({
     String? userId = '',
   }) async {
     final ffApiRequestBody = '''
 {
-  "id": "\$userId",
-  "name": "User"
+  "id": "${escapeStringForJson(userId)}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'createChatUser',
       apiUrl:
-          'https://chat.botpress.cloud/c05e40ad-fe6f-4461-ba87-9057867cd6e1/users',
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/users',
       callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {},
       params: {},
       body: ffApiRequestBody,
       bodyType: BodyType.JSON,
@@ -110,20 +38,16 @@ class CreateChatUserCall {
 class CreateChatConversationCall {
   static Future<ApiCallResponse> call({
     String? userKey = '',
-    String? conversationId = '',
   }) async {
     final ffApiRequestBody = '''
-{
-  "id": "\$conversationId"
-}''';
+{}''';
     return ApiManager.instance.makeApiCall(
       callName: 'createChatConversation',
       apiUrl:
-          'https://chat.botpress.cloud/c05e40ad-fe6f-4461-ba87-9057867cd6e1/conversations',
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/conversations',
       callType: ApiCallType.POST,
       headers: {
-        'Content-Type': 'application/json',
-        'x-user-key': '\$userKey',
+        'x-user-key': '${userKey}',
       },
       params: {},
       body: ffApiRequestBody,
@@ -142,21 +66,24 @@ class SendChatMessageCall {
   static Future<ApiCallResponse> call({
     String? userKey = '',
     String? conversationId = '',
-    String? message = '',
+    String? text = '',
   }) async {
     final ffApiRequestBody = '''
 {
-  "type": "text",
-  "text": "\$message"
+  "payload": {
+    "type": "text",
+    "text": "${escapeStringForJson(text)}"
+  },
+  "conversationId": "${escapeStringForJson(conversationId)}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'sendChatMessage',
       apiUrl:
-          'https://chat.botpress.cloud/c05e40ad-fe6f-4461-ba87-9057867cd6e1/conversations/\$conversationId/messages',
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/messages',
       callType: ApiCallType.POST,
       headers: {
         'Content-Type': 'application/json',
-        'x-user-key': '\$userKey',
+        'x-user-key': '${userKey}',
       },
       params: {},
       body: ffApiRequestBody,
@@ -171,20 +98,72 @@ class SendChatMessageCall {
   }
 }
 
-class CheckCall {
-  static Future<ApiCallResponse> call() async {
+class ListChatMessagesCall {
+  static Future<ApiCallResponse> call({
+    String? conversationId = '',
+    String? userKey = '',
+  }) async {
     return ApiManager.instance.makeApiCall(
-      callName: 'check',
+      callName: 'listChatMessages',
       apiUrl:
-          'https://chat.botpress.cloud/c05e40ad-fe6f-4461-ba87-9057867cd6e1/hello',
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/conversations/${conversationId}/messages',
       callType: ApiCallType.GET,
-      headers: {},
+      headers: {
+        'x-user-key': '${userKey}',
+      },
       params: {},
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetChatUserCall {
+  static Future<ApiCallResponse> call({
+    String? userKey = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getChatUser',
+      apiUrl:
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/users/me',
+      callType: ApiCallType.GET,
+      headers: {
+        'x-user-key': '${userKey}',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ListenToChatConversationCall {
+  static Future<ApiCallResponse> call({
+    String? conversationId = '',
+    String? userKey = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'listenToChatConversation',
+      apiUrl:
+          'https://chat.botpress.cloud/ea356259-4e7b-4120-ae01-89f37ef5d3c3/conversations/${conversationId}/listen',
+      callType: ApiCallType.GET,
+      headers: {
+        'x-user-key': '${userKey}',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: true,
       alwaysAllowBody: false,
     );
   }

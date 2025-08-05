@@ -35,15 +35,13 @@ Future<void> handleFirebaseAuth(
             .collection('users')
             .doc(userCredential.user!.uid)
             .set({
+          // Your required schema
           'email': email,
-          'firstName': '',
-          'lastName': '',
-          'displayName': '',
-          'profilePhoto': '',
-          'phoneNumber': '',
-          'createdAt': FieldValue.serverTimestamp(),
-          'lastActiveTime': FieldValue.serverTimestamp(),
-          'profileComplete': false,
+          'display_name': userCredential.user!.displayName ?? '',
+          'uid': userCredential.user!.uid,
+          'created_time': FieldValue.serverTimestamp(),
+          'photo_url': userCredential.user!.photoURL ?? '',
+          'profile_complete': false,
         });
       }
     } else {
@@ -52,13 +50,14 @@ Future<void> handleFirebaseAuth(
         password: password,
       );
 
-      // UPDATE LAST ACTIVE TIME FOR LOGIN
+      // update display name and photo in case they changed
       if (userCredential.user != null) {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
             .update({
-          'lastActiveTime': FieldValue.serverTimestamp(),
+          'display_name': userCredential.user!.displayName ?? '',
+          'photo_url': userCredential.user!.photoURL ?? '',
         });
       }
     }
@@ -67,7 +66,6 @@ Future<void> handleFirebaseAuth(
     FFAppState().update(() {
       FFAppState().hasFirebaseError = false;
       FFAppState().firebaseErrorMessage = '';
-      FFAppState().isAuthLoading = false;
     });
 
     print('Auth success with Firestore doc: ${userCredential.user?.email}');
@@ -113,7 +111,6 @@ Future<void> handleFirebaseAuth(
     FFAppState().update(() {
       FFAppState().hasFirebaseError = true;
       FFAppState().firebaseErrorMessage = errorMessage;
-      FFAppState().isAuthLoading = false;
     });
 
     print('Auth error: ${e.code} - $errorMessage');
@@ -122,7 +119,6 @@ Future<void> handleFirebaseAuth(
     FFAppState().update(() {
       FFAppState().hasFirebaseError = true;
       FFAppState().firebaseErrorMessage = 'An unexpected error occurred.';
-      FFAppState().isAuthLoading = false;
     });
 
     print('Unknown error: ${e.toString()}');

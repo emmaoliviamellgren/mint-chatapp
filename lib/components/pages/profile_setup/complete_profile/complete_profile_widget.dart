@@ -1,8 +1,11 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
+import '/backend/firebase_storage/storage.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/flutter_flow/upload_data.dart';
+import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +44,12 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
 
   @override
   void dispose() {
+    // On page dispose action.
+    () async {
+      _model.hasSelectedPhoto = false;
+      safeSetState(() {});
+    }();
+
     _model.dispose();
 
     super.dispose();
@@ -114,6 +123,141 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                   ]
                       .divide(SizedBox(height: 5.0))
                       .addToEnd(SizedBox(height: 10.0)),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Stack(
+                      alignment: AlignmentDirectional(0.0, 0.0),
+                      children: [
+                        Container(
+                          width: 70.0,
+                          height: 70.0,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: FlutterFlowTheme.of(context).secondary,
+                              width: 3.0,
+                            ),
+                          ),
+                          child: Builder(
+                            builder: (context) {
+                              if (_model.hasSelectedPhoto == false) {
+                                return Align(
+                                  alignment: AlignmentDirectional(0.0, 0.0),
+                                  child: Icon(
+                                    Icons.face,
+                                    color:
+                                        FlutterFlowTheme.of(context).secondary,
+                                    size: 32.0,
+                                  ),
+                                );
+                              } else {
+                                return Container(
+                                  width: 100.0,
+                                  height: 100.0,
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Image.memory(
+                                    _model.uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                            .bytes ??
+                                        Uint8List.fromList([]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    FFButtonWidget(
+                      onPressed: () async {
+                        final selectedMedia =
+                            await selectMediaWithSourceBottomSheet(
+                          context: context,
+                          maxHeight: 400.00,
+                          allowPhoto: true,
+                          backgroundColor: FlutterFlowTheme.of(context).info,
+                          textColor: FlutterFlowTheme.of(context).primary,
+                          pickerFontFamily: 'Manrope',
+                        );
+                        if (selectedMedia != null &&
+                            selectedMedia.every((m) =>
+                                validateFileFormat(m.storagePath, context))) {
+                          safeSetState(() => _model
+                                  .isDataUploading_selectedMediaResultInCompleteProfile =
+                              true);
+                          var selectedUploadedFiles = <FFUploadedFile>[];
+
+                          try {
+                            selectedUploadedFiles = selectedMedia
+                                .map((m) => FFUploadedFile(
+                                      name: m.storagePath.split('/').last,
+                                      bytes: m.bytes,
+                                      height: m.dimensions?.height,
+                                      width: m.dimensions?.width,
+                                      blurHash: m.blurHash,
+                                    ))
+                                .toList();
+                          } finally {
+                            _model.isDataUploading_selectedMediaResultInCompleteProfile =
+                                false;
+                          }
+                          if (selectedUploadedFiles.length ==
+                              selectedMedia.length) {
+                            safeSetState(() {
+                              _model.uploadedLocalFile_selectedMediaResultInCompleteProfile =
+                                  selectedUploadedFiles.first;
+                            });
+                          } else {
+                            safeSetState(() {});
+                            return;
+                          }
+                        }
+
+                        _model.hasSelectedPhoto = true;
+                        safeSetState(() {});
+                      },
+                      text: 'Choose a photo',
+                      options: FFButtonOptions(
+                        width: MediaQuery.sizeOf(context).width * 0.5,
+                        height: 44.0,
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                            16.0, 0.0, 16.0, 0.0),
+                        iconPadding:
+                            EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                        color: FlutterFlowTheme.of(context).primaryBackground,
+                        textStyle:
+                            FlutterFlowTheme.of(context).titleSmall.override(
+                                  font: GoogleFonts.manrope(
+                                    fontWeight: FlutterFlowTheme.of(context)
+                                        .titleSmall
+                                        .fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .titleSmall
+                                        .fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(context).primary,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FlutterFlowTheme.of(context)
+                                      .titleSmall
+                                      .fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .titleSmall
+                                      .fontStyle,
+                                ),
+                        elevation: 0.0,
+                        borderSide: BorderSide(
+                          color: FlutterFlowTheme.of(context).primary,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                  ].divide(SizedBox(height: 24.0)),
                 ),
                 Form(
                   key: _model.formKey,
@@ -336,26 +480,107 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                 ),
                 FFButtonWidget(
                   onPressed: () async {
-                    if (_model.formKey.currentState == null ||
-                        !_model.formKey.currentState!.validate()) {
-                      return;
+                    final firestoreBatch = FirebaseFirestore.instance.batch();
+                    try {
+                      if (_model.formKey.currentState == null ||
+                          !_model.formKey.currentState!.validate()) {
+                        return;
+                      }
+                      if (_model.hasSelectedPhoto == true) {
+                        // Upload the photo to FB
+                        {
+                          safeSetState(() => _model
+                                  .isDataUploading_photoUploadResultFromCompleteProfile =
+                              true);
+                          var selectedUploadedFiles = <FFUploadedFile>[];
+                          var selectedMedia = <SelectedFile>[];
+                          var downloadUrls = <String>[];
+                          try {
+                            selectedUploadedFiles = _model
+                                    .uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                    .bytes!
+                                    .isNotEmpty
+                                ? [
+                                    _model
+                                        .uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                  ]
+                                : <FFUploadedFile>[];
+                            selectedMedia = selectedFilesFromUploadedFiles(
+                              selectedUploadedFiles,
+                            );
+                            downloadUrls = (await Future.wait(
+                              selectedMedia.map(
+                                (m) async =>
+                                    await uploadData(m.storagePath, m.bytes),
+                              ),
+                            ))
+                                .where((u) => u != null)
+                                .map((u) => u!)
+                                .toList();
+                          } finally {
+                            _model.isDataUploading_photoUploadResultFromCompleteProfile =
+                                false;
+                          }
+                          if (selectedUploadedFiles.length ==
+                                  selectedMedia.length &&
+                              downloadUrls.length == selectedMedia.length) {
+                            safeSetState(() {
+                              _model.uploadedLocalFile_photoUploadResultFromCompleteProfile =
+                                  selectedUploadedFiles.first;
+                              _model.uploadedFileUrl_photoUploadResultFromCompleteProfile =
+                                  downloadUrls.first;
+                            });
+                          } else {
+                            safeSetState(() {});
+                            return;
+                          }
+                        }
+
+                        // Add photo to user doc
+
+                        firestoreBatch.update(
+                            currentUserReference!,
+                            createUsersRecordData(
+                              photoUrl: _model
+                                  .uploadedFileUrl_photoUploadResultFromCompleteProfile,
+                            ));
+                        // Set profile photo in app
+                        FFAppState().userProfilePhoto = _model
+                            .uploadedFileUrl_photoUploadResultFromCompleteProfile;
+                        safeSetState(() {});
+                        // Set hasSelectedPhoto to false
+                        _model.hasSelectedPhoto = false;
+                        safeSetState(() {});
+                      }
+                      // Update Firestore
+
+                      firestoreBatch.update(
+                          currentUserReference!,
+                          createUsersRecordData(
+                            displayName:
+                                '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}',
+                            profileComplete: true,
+                          ));
+                      // Update Firebase Auth
+                      await actions.updateFirebaseDisplayName(
+                        '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}',
+                      );
+                      if (Navigator.of(context).canPop()) {
+                        context.pop();
+                      }
+                      context.pushNamed(
+                        UserDashboardWidget.routeName,
+                        extra: <String, dynamic>{
+                          kTransitionInfoKey: TransitionInfo(
+                            hasTransition: true,
+                            transitionType: PageTransitionType.scale,
+                            alignment: Alignment.bottomCenter,
+                          ),
+                        },
+                      );
+                    } finally {
+                      await firestoreBatch.commit();
                     }
-
-                    await currentUserReference!.update(createUsersRecordData(
-                      displayName:
-                          '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}',
-                    ));
-
-                    context.pushNamed(
-                      UserDashboardWidget.routeName,
-                      extra: <String, dynamic>{
-                        kTransitionInfoKey: TransitionInfo(
-                          hasTransition: true,
-                          transitionType: PageTransitionType.scale,
-                          alignment: Alignment.bottomCenter,
-                        ),
-                      },
-                    );
                   },
                   text: 'Continue',
                   options: FFButtonOptions(

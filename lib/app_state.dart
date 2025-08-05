@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:csv/csv.dart';
+import 'package:synchronized/synchronized.dart';
+import 'flutter_flow/flutter_flow_util.dart';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -15,10 +18,13 @@ class FFAppState extends ChangeNotifier {
   }
 
   Future initializePersistedState() async {
-    prefs = await SharedPreferences.getInstance();
-    _safeInit(() {
-      _uploadedProfilePhoto =
-          prefs.getString('ff_uploadedProfilePhoto') ?? _uploadedProfilePhoto;
+    secureStorage = FlutterSecureStorage();
+    await _safeInitAsync(() async {
+      _userKey = await secureStorage.getString('ff_userKey') ?? _userKey;
+    });
+    await _safeInitAsync(() async {
+      _conversationId =
+          await secureStorage.getString('ff_conversationId') ?? _conversationId;
     });
   }
 
@@ -27,7 +33,7 @@ class FFAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  late SharedPreferences prefs;
+  late FlutterSecureStorage secureStorage;
 
   /// Current index for slide in slideshow on landing page
   int _currentSlideIndex = 0;
@@ -42,13 +48,6 @@ class FFAppState extends ChangeNotifier {
     _isAppleButtonDisabled = value;
   }
 
-  String _uploadedProfilePhoto = '';
-  String get uploadedProfilePhoto => _uploadedProfilePhoto;
-  set uploadedProfilePhoto(String value) {
-    _uploadedProfilePhoto = value;
-    prefs.setString('ff_uploadedProfilePhoto', value);
-  }
-
   String _firebaseErrorMessage = '';
   String get firebaseErrorMessage => _firebaseErrorMessage;
   set firebaseErrorMessage(String value) {
@@ -61,17 +60,80 @@ class FFAppState extends ChangeNotifier {
     _hasFirebaseError = value;
   }
 
-  /// Firebase Auth response
-  dynamic _authResult;
-  dynamic get authResult => _authResult;
-  set authResult(dynamic value) {
-    _authResult = value;
+  /// Messages with bot and user
+  List<dynamic> _chatMessages = [];
+  List<dynamic> get chatMessages => _chatMessages;
+  set chatMessages(List<dynamic> value) {
+    _chatMessages = value;
   }
 
-  bool _isAuthLoading = false;
-  bool get isAuthLoading => _isAuthLoading;
-  set isAuthLoading(bool value) {
-    _isAuthLoading = value;
+  void addToChatMessages(dynamic value) {
+    chatMessages.add(value);
+  }
+
+  void removeFromChatMessages(dynamic value) {
+    chatMessages.remove(value);
+  }
+
+  void removeAtIndexFromChatMessages(int index) {
+    chatMessages.removeAt(index);
+  }
+
+  void updateChatMessagesAtIndex(
+    int index,
+    dynamic Function(dynamic) updateFn,
+  ) {
+    chatMessages[index] = updateFn(_chatMessages[index]);
+  }
+
+  void insertAtIndexInChatMessages(int index, dynamic value) {
+    chatMessages.insert(index, value);
+  }
+
+  String _userKey = '';
+  String get userKey => _userKey;
+  set userKey(String value) {
+    _userKey = value;
+    secureStorage.setString('ff_userKey', value);
+  }
+
+  void deleteUserKey() {
+    secureStorage.delete(key: 'ff_userKey');
+  }
+
+  String _conversationId = '';
+  String get conversationId => _conversationId;
+  set conversationId(String value) {
+    _conversationId = value;
+    secureStorage.setString('ff_conversationId', value);
+  }
+
+  void deleteConversationId() {
+    secureStorage.delete(key: 'ff_conversationId');
+  }
+
+  bool _isBotTyping = false;
+  bool get isBotTyping => _isBotTyping;
+  set isBotTyping(bool value) {
+    _isBotTyping = value;
+  }
+
+  String _userDisplayName = 'User';
+  String get userDisplayName => _userDisplayName;
+  set userDisplayName(String value) {
+    _userDisplayName = value;
+  }
+
+  String _userProfilePhoto = '';
+  String get userProfilePhoto => _userProfilePhoto;
+  set userProfilePhoto(String value) {
+    _userProfilePhoto = value;
+  }
+
+  bool _shouldAutoScroll = false;
+  bool get shouldAutoScroll => _shouldAutoScroll;
+  set shouldAutoScroll(bool value) {
+    _shouldAutoScroll = value;
   }
 }
 
@@ -85,4 +147,47 @@ Future _safeInitAsync(Function() initializeField) async {
   try {
     await initializeField();
   } catch (_) {}
+}
+
+extension FlutterSecureStorageExtensions on FlutterSecureStorage {
+  static final _lock = Lock();
+
+  Future<void> writeSync({required String key, String? value}) async =>
+      await _lock.synchronized(() async {
+        await write(key: key, value: value);
+      });
+
+  void remove(String key) => delete(key: key);
+
+  Future<String?> getString(String key) async => await read(key: key);
+  Future<void> setString(String key, String value) async =>
+      await writeSync(key: key, value: value);
+
+  Future<bool?> getBool(String key) async => (await read(key: key)) == 'true';
+  Future<void> setBool(String key, bool value) async =>
+      await writeSync(key: key, value: value.toString());
+
+  Future<int?> getInt(String key) async =>
+      int.tryParse(await read(key: key) ?? '');
+  Future<void> setInt(String key, int value) async =>
+      await writeSync(key: key, value: value.toString());
+
+  Future<double?> getDouble(String key) async =>
+      double.tryParse(await read(key: key) ?? '');
+  Future<void> setDouble(String key, double value) async =>
+      await writeSync(key: key, value: value.toString());
+
+  Future<List<String>?> getStringList(String key) async =>
+      await read(key: key).then((result) {
+        if (result == null || result.isEmpty) {
+          return null;
+        }
+        return CsvToListConverter()
+            .convert(result)
+            .first
+            .map((e) => e.toString())
+            .toList();
+      });
+  Future<void> setStringList(String key, List<String> value) async =>
+      await writeSync(key: key, value: ListToCsvConverter().convert([value]));
 }

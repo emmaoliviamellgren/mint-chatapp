@@ -81,18 +81,24 @@ bool shouldDisableUpdateProfileButton(
   String? currentLast,
   String? originalFirst,
   String? originalLast,
+  bool hasSelectedPhoto,
 ) {
-  return (currentFirst == originalFirst) && (currentLast == originalLast);
-}
+  // Check if names have changed
+  bool namesChanged =
+      (currentFirst != originalFirst) || (currentLast != originalLast);
 
-String generateUserId() {
-  return DateTime.now().millisecondsSinceEpoch.toString();
+  // Enable button if either names changed OR photo selected
+  bool shouldEnable = namesChanged || hasSelectedPhoto;
+
+  // Return opposite (since function asks if button should be DISABLED)
+  return !shouldEnable;
 }
 
 dynamic createMessage(
-  String? text,
-  String? sender,
+  String text,
+  String sender,
   DateTime? timestamp,
+  bool? isNew,
 ) {
   final now = timestamp ?? DateTime.now();
   return {
@@ -100,107 +106,40 @@ dynamic createMessage(
     'text': text,
     'sender': sender,
     'timestamp': now.toIso8601String(),
+    'isNew': isNew ?? false,
     'formattedTime':
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
   };
 }
 
-String formatMessageTime(DateTime timestamp) {
-  return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+List<dynamic> getChatMessages(List<dynamic> chatMessages) {
+  return List.from(chatMessages ?? []);
 }
 
-bool isValidConversationId(String? conversationId) {
-  return conversationId != null && conversationId.isNotEmpty;
-}
-
-String cleanUserInput(String input) {
-  return input.trim();
-}
-
-bool canSendMessage(
-  String input,
-  String? conversationId,
-  bool isLoading,
+bool shouldCompleteAnimation(
+  dynamic message,
+  int messageIndex,
 ) {
-  return input.trim().isNotEmpty &&
-      conversationId != null &&
-      conversationId.isNotEmpty &&
-      !isLoading;
-}
-
-List<dynamic> extractBotMessages(dynamic apiResponse) {
-  List<dynamic> botMessages = [];
-
-  if (apiResponse != null && apiResponse['messages'] != null) {
-    List messages = apiResponse['messages'];
-
-    for (var message in messages) {
-      if (message['payload'] != null && message['payload']['type'] == 'text') {
-        final now = message['createdAt'] != null
-            ? DateTime.tryParse(message['createdAt']) ?? DateTime.now()
-            : DateTime.now();
-
-        Map<String, dynamic> botMessage = {
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'text': message['payload']['text'],
-          'sender': 'bot',
-          'timestamp': now.toIso8601String(),
-          'formattedTime':
-              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-        };
-
-        botMessages.add(botMessage);
-      }
+  try {
+    // Check if it's a typing message (should always animate regardless of index)
+    final messageId = message['id']?.toString() ?? '';
+    if (messageId.contains('typing_')) {
+      print('Found typing message at index $messageIndex - should animate');
+      return false; // Don't complete - should animate
     }
-  }
 
-  if (botMessages.isEmpty) {
-    final now = DateTime.now();
-    Map<String, dynamic> errorMessage = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'text': 'Sorry, I encountered an error. Please try again.',
-      'sender': 'bot',
-      'timestamp': now.toIso8601String(),
-      'formattedTime':
-          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-    };
-
-    botMessages.add(errorMessage);
-  }
-
-  return botMessages;
-}
-
-dynamic getFirstBotMessage(dynamic apiResponse) {
-  if (apiResponse != null && apiResponse['messages'] != null) {
-    List messages = apiResponse['messages'];
-
-    for (var message in messages) {
-      if (message['payload'] != null && message['payload']['type'] == 'text') {
-        final now = message['createdAt'] != null
-            ? DateTime.tryParse(message['createdAt']) ?? DateTime.now()
-            : DateTime.now();
-
-        return {
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'text': message['payload']['text'],
-          'sender': 'bot',
-          'timestamp': now.toIso8601String(),
-          'formattedTime':
-              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-        };
-      }
+    // Check if message has isNew flag (should animate if at index 0 or 1)
+    final isNew = message['isNew'];
+    if ((isNew == true || isNew == 'true') && messageIndex <= 1) {
+      print('Found new message at index $messageIndex - should animate');
+      return false; // Don't complete - should animate
     }
-  }
 
-// Default error message
-  final now = DateTime.now();
-  return {
-    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-    'text': 'Sorry, I encountered an error. Please try again.',
-    'sender': 'bot',
-    'timestamp': now.toIso8601String(),
-    'formattedTime':
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-  };
+    // Complete animation for all other cases
+    print('Message at index $messageIndex should not animate');
+    return true;
+  } catch (e) {
+    print('Error in shouldCompleteAnimation: $e');
+    return true;
+  }
 }
