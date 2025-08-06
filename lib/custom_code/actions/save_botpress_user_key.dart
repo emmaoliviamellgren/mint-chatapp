@@ -27,7 +27,6 @@ Future saveBotpressUserKey(String userKey) async {
       'botpress_last_chat_time': FieldValue.serverTimestamp(),
     });
 
-    print('Successfully saved Botpress user key to Firestore');
   } catch (e) {
     print('Error saving Botpress user key: ${e.toString()}');
   }

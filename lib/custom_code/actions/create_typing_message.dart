@@ -39,8 +39,6 @@ Future<void> createTypingMessage() async {
     FFAppState().update(() {
       FFAppState().chatMessages = currentMessages;
     });
-
-    print('Created typing message at index 0');
   } catch (e) {
     print('Error creating typing message: $e');
   }

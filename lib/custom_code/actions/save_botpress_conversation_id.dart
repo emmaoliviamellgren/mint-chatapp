@@ -27,7 +27,6 @@ Future saveBotpressConversationId(String conversationId) async {
       'botpress_last_chat_time': FieldValue.serverTimestamp(),
     });
 
-    print('Successfully saved Botpress conversation ID to Firestore');
   } catch (e) {
     print('Error saving Botpress conversation ID: ${e.toString()}');
   }

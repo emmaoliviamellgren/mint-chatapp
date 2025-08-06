@@ -14,7 +14,6 @@ Future updateFirebaseDisplayName(String displayName) async {
   try {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print('No authenticated user found');
       return;
     }
 
@@ -24,7 +23,6 @@ Future updateFirebaseDisplayName(String displayName) async {
     // Reload user to refresh FlutterFlow's cached data
     await currentUser.reload();
 
-    print('Successfully updated Firebase Auth display name to: $displayName');
   } catch (e) {
     print('Error updating Firebase Auth display name: ${e.toString()}');
   }

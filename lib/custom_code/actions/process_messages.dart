@@ -21,7 +21,7 @@ Future<void> processMessages(
     // Handle different response formats
     if (apiResponse is Map) {
       if (apiResponse.containsKey('messages')) {
-        // Historical messages
+        // Historical messages - don't mark as new
         messagesToProcess = apiResponse['messages'] ?? [];
       } else if (apiResponse.containsKey('type') && apiResponse['type'] == 'message.created') {
         // SSE message
@@ -51,7 +51,7 @@ Future<void> processMessages(
           final now = DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now();
           final isUser = messageData['userId'] == currentUserId;
           
-          // Remove typing indicator when bot message arrives
+          // Remove typing indicator when bot message arrives from streaming
           if (!isUser && isFromStreaming) {
             currentMessages.removeWhere((msg) => 
               msg['isTyping'] == true || 
@@ -65,13 +65,14 @@ Future<void> processMessages(
             'sender': isUser ? 'user' : 'bot',
             'userId': messageData['userId'],
             'timestamp': now.toIso8601String(),
-            'isNew': isFromStreaming && !isUser, // Mark bot messages from streaming as new for animation
+            // Only mark as new if it's from streaming AND it's a bot message
+            // AND it's not from the initial load
+            'isNew': isFromStreaming && !isUser,
           };
           
           currentMessages.insert(0, newMessage);
           hasChanges = true;
           
-          print('Added ${isUser ? "user" : "bot"} message: ${messageData['payload']['text']}');
         }
       }
     }
@@ -87,7 +88,6 @@ Future<void> processMessages(
         FFAppState().chatMessages = currentMessages;
       });
       
-      print('Updated chat messages. Total count: ${currentMessages.length}');
     }
   } catch (e) {
     print('Error processing messages: $e');

@@ -124,19 +124,16 @@ bool shouldCompleteAnimation(
     // Check if it's a typing placeholder message
     final messageText = message['text']?.toString() ?? '';
     if (messageText == 'TYPING_PLACEHOLDER') {
-      print('Found typing placeholder at index $messageIndex - should animate');
       return false; // Don't complete - should animate
     }
 
     // Check if message has isNew flag and is at index 0 (newest message in reverse list)
     final isNew = message['isNew'];
     if ((isNew == true || isNew == 'true') && messageIndex == 0) {
-      print('Found new message at index $messageIndex - should animate');
       return false; // Don't complete - should animate
     }
 
     // Complete animation for all other cases
-    print('Message at index $messageIndex should not animate');
     return true;
   } catch (e) {
     print('Error in shouldCompleteAnimation: $e');

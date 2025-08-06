@@ -68,7 +68,6 @@ Future<void> handleFirebaseAuth(
       FFAppState().firebaseErrorMessage = '';
     });
 
-    print('Auth success with Firestore doc: ${userCredential.user?.email}');
   } on FirebaseAuthException catch (e) {
     String errorMessage;
 

@@ -162,7 +162,6 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
         }
       },
       onDone: () {
-        print('SSE Stream closed');
         // Hide typing indicator when stream closes
         if (_isBotTyping) {
           safeSetState(() => _isBotTyping = false);
@@ -183,25 +182,26 @@ Future<void> _handleSendMessage() async {
   
   // Don't add user message immediately - let it come through the stream
   // This prevents duplicate messages
-  
-  // Show typing indicator
-  safeSetState(() => _isBotTyping = true);
-  _scrollToBottom(isAnimated: true);
 
   try {
-    // Send message to API
+    // Send message to API first
     await SendChatMessageCall.call(
       userKey: FFAppState().userKey, 
       conversationId: FFAppState().conversationId, 
       text: messageToSend
     );
+    
+    // Show typing indicator AFTER sending (so user message appears first through stream)
+    await Future.delayed(Duration(milliseconds: 200)); // Small delay to let user message appear
+    if (mounted) {
+      safeSetState(() => _isBotTyping = true);
+      _scrollToBottom(isAnimated: true);
+    }
   } catch (e) {
     print('Error sending message: $e');
-    // Hide typing indicator on error
-    safeSetState(() => _isBotTyping = false);
   } finally {
     _model.isSendingMessage = false;
-    safeSetState(() {});
+    if (mounted) safeSetState(() {});
   }
 }
   
@@ -425,109 +425,117 @@ void _scrollToBottom({bool isAnimated = false}) {
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
-    if (message['sender'] == null || message['text'] == null) return SizedBox.shrink();
-    
-    final isUser = message['sender'].toString() == 'user';
-    final text = message['text'].toString();
-    final messageId = (message['id'] ?? message['timestamp']).toString();
-    final bool shouldAnimate = !isUser && index == 0 && !_animatedMessageIds.contains(messageId);
+Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
+  if (message['sender'] == null || message['text'] == null) return SizedBox.shrink();
+  
+  final isUser = message['sender'].toString() == 'user';
+  final text = message['text'].toString();
+  final messageId = (message['id'] ?? message['timestamp']).toString();
+  
+  // Only animate bot messages that are marked as 'isNew' and at index 0
+  final bool shouldAnimate = !isUser && 
+                             index == 0 && 
+                             message['isNew'] == true && 
+                             !_animatedMessageIds.contains(messageId);
 
-    if (isUser) {
-      return Padding(
-        padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: BoxConstraints(minHeight: 43.0),
-                decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).primary,
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Text(
-                    text,
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.manrope(
-                        fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                        fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                      ),
-                      color: FlutterFlowTheme.of(context).info,
+  if (isUser) {
+    return Padding(
+      padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              constraints: BoxConstraints(minHeight: 43.0),
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).primary,
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(12.0),
+                child: Text(
+                  text,
+                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                    font: GoogleFonts.manrope(
+                      fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+                      fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
                     ),
+                    color: FlutterFlowTheme.of(context).info,
                   ),
                 ),
               ),
             ),
-            Container(
-              width: 36.0,
-              height: 36.0,
-              decoration: BoxDecoration(
-                color: FlutterFlowTheme.of(context).alternate,
-                shape: BoxShape.circle,
-              ),
-              child: Align(
-                alignment: AlignmentDirectional(0.0, 0.0),
-                child: Icon(
-                  Icons.face,
-                  color: FlutterFlowTheme.of(context).tertiary,
-                  size: 24.0,
-                ),
+          ),
+          Container(
+            width: 36.0,
+            height: 36.0,
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).alternate,
+              shape: BoxShape.circle,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional(0.0, 0.0),
+              child: Icon(
+                Icons.face,
+                color: FlutterFlowTheme.of(context).tertiary,
+                size: 24.0,
               ),
             ),
-          ].divide(SizedBox(width: 12.0)),
-        ),
-      );
-    } else {
-      final botTextStyle = FlutterFlowTheme.of(context).bodyMedium.override(
-        font: GoogleFonts.manrope(
-          fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-          fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-        ),
-      );
-      return Padding(
-        padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36.0,
-              height: 36.0,
-              decoration: BoxDecoration(
-                color: FlutterFlowTheme.of(context).primary,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20.0),
+          ),
+        ].divide(SizedBox(width: 12.0)),
+      ),
+    );
+  } else {
+    final botTextStyle = FlutterFlowTheme.of(context).bodyMedium.override(
+      font: GoogleFonts.manrope(
+        fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+        fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+      ),
+    );
+    return Padding(
+      padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36.0,
+            height: 36.0,
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).primary,
+              shape: BoxShape.circle,
             ),
-            Container(
-              width: 260.0,
-              constraints: BoxConstraints(minHeight: 43.0),
-              decoration: BoxDecoration(color: FlutterFlowTheme.of(context).secondaryBackground, borderRadius: BorderRadius.circular(16.0)),
-              child: Padding(
-                padding: EdgeInsets.all(12.0),
-                child: shouldAnimate
-                  ? custom_widgets.BotMessage(
-                      key: Key(messageId),
-                      text: text,
-                      textColor: FlutterFlowTheme.of(context).primaryText,
-                      dotColor: FlutterFlowTheme.of(context).primary,
-                      onComplete: () {
-                        if(mounted) _animatedMessageIds.add(messageId);
-                      },
-                    )
-                  : Text(text, style: botTextStyle),
-              ),
+            child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20.0),
+          ),
+          Container(
+            width: 260.0,
+            constraints: BoxConstraints(minHeight: 43.0),
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).secondaryBackground, 
+              borderRadius: BorderRadius.circular(16.0)
             ),
-          ].divide(SizedBox(width: 12.0)),
-        ),
-      );
-    }
+            child: Padding(
+              padding: EdgeInsets.all(12.0),
+              child: shouldAnimate
+                ? custom_widgets.BotMessage(
+                    key: Key(messageId),
+                    text: text,
+                    textColor: FlutterFlowTheme.of(context).primaryText,
+                    dotColor: FlutterFlowTheme.of(context).primary,
+                    onComplete: () {
+                      if(mounted) _animatedMessageIds.add(messageId);
+                    },
+                  )
+                : Text(text, style: botTextStyle),
+            ),
+          ),
+        ].divide(SizedBox(width: 12.0)),
+      ),
+    );
   }
+}
 
   Widget _buildTypingIndicator() {
     return Padding(
