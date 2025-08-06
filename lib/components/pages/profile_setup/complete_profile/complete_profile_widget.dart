@@ -13,8 +13,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'complete_profile_model.dart';
 export 'complete_profile_model.dart';
 
-/// Create a Create Profile page, where the user will fill in their name as
-/// well as upload a profile image.
 class CompleteProfileWidget extends StatefulWidget {
   const CompleteProfileWidget({super.key});
 
@@ -27,8 +25,13 @@ class CompleteProfileWidget extends StatefulWidget {
 
 class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
   late CompleteProfileModel _model;
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
+
+  void safeSetStateIfMounted(VoidCallback fn) {
+    if (mounted) {
+      safeSetState(fn);
+    }
+  }
 
   @override
   void initState() {
@@ -44,14 +47,12 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
 
   @override
   void dispose() {
-    // On page dispose action.
-    () async {
+    if (mounted) {
       _model.hasSelectedPhoto = false;
       safeSetState(() {});
-    }();
+    }
 
     _model.dispose();
-
     super.dispose();
   }
 
@@ -187,9 +188,10 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                         if (selectedMedia != null &&
                             selectedMedia.every((m) =>
                                 validateFileFormat(m.storagePath, context))) {
-                          safeSetState(() => _model
+                          safeSetStateIfMounted(() => _model
                                   .isDataUploading_selectedMediaResultInCompleteProfile =
                               true);
+
                           var selectedUploadedFiles = <FFUploadedFile>[];
 
                           try {
@@ -203,23 +205,25 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                                     ))
                                 .toList();
                           } finally {
-                            _model.isDataUploading_selectedMediaResultInCompleteProfile =
-                                false;
+                            if (mounted) {
+                              _model.isDataUploading_selectedMediaResultInCompleteProfile =
+                                  false;
+                            }
                           }
                           if (selectedUploadedFiles.length ==
                               selectedMedia.length) {
-                            safeSetState(() {
+                            safeSetStateIfMounted(() {
                               _model.uploadedLocalFile_selectedMediaResultInCompleteProfile =
                                   selectedUploadedFiles.first;
                             });
                           } else {
-                            safeSetState(() {});
+                            safeSetStateIfMounted(() {});
                             return;
                           }
                         }
 
                         _model.hasSelectedPhoto = true;
-                        safeSetState(() {});
+                        safeSetStateIfMounted(() {});
                       },
                       text: 'Choose a photo',
                       options: FFButtonOptions(

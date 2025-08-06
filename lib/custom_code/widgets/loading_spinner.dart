@@ -1,13 +1,10 @@
-// Automatic FlutterFlow imports
 import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import 'index.dart'; // Imports other custom widgets
-import '/custom_code/actions/index.dart'; // Imports custom actions
-import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'index.dart';
+import '/custom_code/actions/index.dart';
+import '/flutter_flow/custom_functions.dart';
 import 'package:flutter/material.dart';
-// Begin custom widget code
-// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 class LoadingSpinner extends StatefulWidget {
   const LoadingSpinner({
@@ -46,21 +43,21 @@ class _LoadingSpinnerState extends State<LoadingSpinner>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.width,
-      height: widget.height,
-      child: Center(
-        child: RotationTransition(
-          turns: _controller,
-          child: Icon(
-            Icons.refresh,
-            size: widget.size,
-            color: widget.color,
-          ),
+@override
+Widget build(BuildContext context) {
+  return SizedBox(
+    width: widget.width ?? widget.size,
+    height: widget.height ?? widget.size,
+    child: Center(
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: CircularProgressIndicator(
+          color: widget.color,
+          strokeWidth: 4.0,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

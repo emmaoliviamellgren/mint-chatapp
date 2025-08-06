@@ -1,6 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/api_requests/api_calls.dart';
-import '/backend/api_requests/api_manager.dart';
 import '/backend/api_requests/api_streaming.dart';
 import '/backend/backend.dart';
 import '/components/loader_widget.dart';
@@ -11,7 +10,6 @@ import 'dart:async';
 import 'dart:convert';
 import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
-import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -31,7 +29,8 @@ class ChatWidget extends StatefulWidget {
   State<ChatWidget> createState() => _ChatWidgetState();
 }
 
-class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMixin {
+class _ChatWidgetState extends State<ChatWidget>
+    with AutomaticKeepAliveClientMixin {
   late ChatModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final _scrollController = ScrollController();
@@ -49,14 +48,14 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
     _model = createModel(context, () => ChatModel());
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
-    
+
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_isInitialized) {
         _initializeChat();
       }
     });
   }
-  
+
   void safeSetState(VoidCallback fn) {
     if (mounted) {
       setState(fn);
@@ -65,58 +64,60 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
 
   Future<void> _initializeChat() async {
     if (_isInitialized || !mounted) return;
-    
+
     safeSetState(() => _model.isLoading = true);
-    
+
     try {
       final userStatus = await actions.checkBotpressUserStatus();
       if (userStatus == 'existing_user') {
         FFAppState().userKey = (await actions.getBotpressUserKey())!;
       } else {
-        final createUserResult = await CreateChatUserCall.call(userId: currentUserUid);
+        final createUserResult =
+            await CreateChatUserCall.call(userId: currentUserUid);
         if (createUserResult.succeeded) {
-          FFAppState().userKey = getJsonField(createUserResult.jsonBody, r'''$.key''').toString();
+          FFAppState().userKey =
+              getJsonField(createUserResult.jsonBody, r'''$.key''').toString();
           await actions.saveBotpressUserKey(FFAppState().userKey);
-        } else { 
-          throw Exception('Error creating user'); 
+        } else {
+          throw Exception('Error creating user');
         }
       }
-      
+
       final storedConversationId = await actions.getBotpressConversationId();
       if (storedConversationId != null && storedConversationId.isNotEmpty) {
         FFAppState().conversationId = storedConversationId;
       } else {
-        final createConversationResult = await CreateChatConversationCall.call(userKey: FFAppState().userKey);
+        final createConversationResult = await CreateChatConversationCall.call(
+            userKey: FFAppState().userKey);
         if (createConversationResult.succeeded) {
-          FFAppState().conversationId = getJsonField(createConversationResult.jsonBody, r'''$.conversation.id''').toString();
+          FFAppState().conversationId = getJsonField(
+                  createConversationResult.jsonBody, r'''$.conversation.id''')
+              .toString();
           await actions.saveBotpressConversationId(FFAppState().conversationId);
-        } else { 
-          throw Exception('Error creating conversation'); 
+        } else {
+          throw Exception('Error creating conversation');
         }
       }
-      
-      FFAppState().chatMessages = []; 
+
+      FFAppState().chatMessages = [];
       final loadMessagesResult = await ListChatMessagesCall.call(
-        userKey: FFAppState().userKey, 
-        conversationId: FFAppState().conversationId
-      );
-      
+          userKey: FFAppState().userKey,
+          conversationId: FFAppState().conversationId);
+
       if (loadMessagesResult.succeeded) {
-        await actions.processMessages(loadMessagesResult.jsonBody, currentUserUid, false);
-      } else { 
-        throw Exception('Error loading messages'); 
+        await actions.processMessages(
+            loadMessagesResult.jsonBody, currentUserUid, false);
+      } else {
+        throw Exception('Error loading messages');
       }
-      
+
       await _listenToStream();
       _isInitialized = true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Failed to initialize chat: ${e.toString()}'),
-            backgroundColor: FlutterFlowTheme.of(context).error
-          )
-        );
+            backgroundColor: FlutterFlowTheme.of(context).error));
       }
     } finally {
       safeSetState(() => _model.isLoading = false);
@@ -124,99 +125,96 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
   }
 
   Future<void> _listenToStream() async {
-  await _streamSubscription?.cancel();
-  final streamingApiResult = await ListenToChatConversationCall.call(
-    userKey: FFAppState().userKey, 
-    conversationId: FFAppState().conversationId
-  );
-  
-  if (streamingApiResult.succeeded && mounted) {
-    _streamSubscription = streamingApiResult.streamedResponse?.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .transform(ServerSentEventLineTransformer())
-        .map((m) => ResponseStreamMessage(message: m))
-        .listen(
-      (onMessageInput) async {
-        if (!mounted) return;
-        final dynamic jsonData = onMessageInput.serverSentEvent.jsonData;
-        if (jsonData == null) return;
-        
-        final messagePayload = getJsonField(jsonData, r'''$.data''') ?? getJsonField(jsonData, r'''$.payload''');
-        if (messagePayload == null) return;
+    await _streamSubscription?.cancel();
+    final streamingApiResult = await ListenToChatConversationCall.call(
+        userKey: FFAppState().userKey,
+        conversationId: FFAppState().conversationId);
 
-        // Check if this is a bot message and hide typing indicator
-        final incomingUserId = getJsonField(messagePayload, r'''$.userId''').toString();
-        if (incomingUserId != currentUserUid && _isBotTyping) {
-          safeSetState(() => _isBotTyping = false);
-        }
-        
-        await actions.processMessages(jsonData, currentUserUid, true);
-        _scrollToBottom();
-      },
-      onError: (error) {
-        print('SSE Stream error: $error');
-        // Hide typing indicator on error
-        if (_isBotTyping) {
-          safeSetState(() => _isBotTyping = false);
-        }
-      },
-      onDone: () {
-        // Hide typing indicator when stream closes
-        if (_isBotTyping) {
-          safeSetState(() => _isBotTyping = false);
-        }
-      },
-    );
-  }
-}
+    if (streamingApiResult.succeeded && mounted) {
+      _streamSubscription = streamingApiResult.streamedResponse?.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .transform(ServerSentEventLineTransformer())
+          .map((m) => ResponseStreamMessage(message: m))
+          .listen(
+        (onMessageInput) async {
+          if (!mounted) return;
+          final dynamic jsonData = onMessageInput.serverSentEvent.jsonData;
+          if (jsonData == null) return;
 
-Future<void> _handleSendMessage() async {
-  final messageText = _model.textController.text;
-  if (messageText.isEmpty || _model.isSendingMessage) return;
-  
-  safeSetState(() => _model.isSendingMessage = true);
-  final messageToSend = _model.textController.text;
-  _model.textController?.clear();
-  FocusScope.of(context).unfocus();
-  
-  // Don't add user message immediately - let it come through the stream
-  // This prevents duplicate messages
+          final messagePayload = getJsonField(jsonData, r'''$.data''') ??
+              getJsonField(jsonData, r'''$.payload''');
+          if (messagePayload == null) return;
 
-  try {
-    // Send message to API first
-    await SendChatMessageCall.call(
-      userKey: FFAppState().userKey, 
-      conversationId: FFAppState().conversationId, 
-      text: messageToSend
-    );
-    
-    // Show typing indicator AFTER sending (so user message appears first through stream)
-    await Future.delayed(Duration(milliseconds: 200)); // Small delay to let user message appear
-    if (mounted) {
-      safeSetState(() => _isBotTyping = true);
-      _scrollToBottom(isAnimated: true);
-    }
-  } catch (e) {
-    print('Error sending message: $e');
-  } finally {
-    _model.isSendingMessage = false;
-    if (mounted) safeSetState(() {});
-  }
-}
-  
-void _scrollToBottom({bool isAnimated = false}) {
-  // Use WidgetsBinding instead of SchedulerBinding for better timing
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted && _scrollController.hasClients) {
-      _scrollController.animateTo(
-        0.0,
-        duration: Duration(milliseconds: isAnimated ? 300 : 200),
-        curve: Curves.easeOut,
+          final incomingUserId =
+              getJsonField(messagePayload, r'''$.userId''').toString();
+          if (incomingUserId != currentUserUid && _isBotTyping) {
+            safeSetState(() => _isBotTyping = false);
+          }
+
+          await actions.processMessages(jsonData, currentUserUid, true);
+          _scrollToBottom();
+        },
+        onError: (error) {
+          print('SSE Stream error: $error');
+          if (_isBotTyping) {
+            safeSetState(() => _isBotTyping = false);
+          }
+        },
+        onDone: () {
+          if (_isBotTyping) {
+            safeSetState(() => _isBotTyping = false);
+          }
+        },
       );
     }
-  });
-}
+  }
+
+  Future<void> _handleSendMessage() async {
+    final messageText = _model.textController.text;
+    if (messageText.isEmpty || _model.isSendingMessage) return;
+
+    safeSetState(() => _model.isSendingMessage = true);
+    final messageToSend = _model.textController.text;
+    _model.textController?.clear();
+    FocusScope.of(context).unfocus();
+
+    try {
+      await SendChatMessageCall.call(
+          userKey: FFAppState().userKey,
+          conversationId: FFAppState().conversationId,
+          text: messageToSend);
+
+      // Show typing indicator AFTER sending (so user message appears first through stream)
+      await Future.delayed(Duration(milliseconds: 200));
+      if (mounted) {
+        safeSetState(() => _isBotTyping = true);
+        _scrollToBottom(isAnimated: true);
+      }
+    } catch (e) {
+      print('Error sending message: $e');
+    } finally {
+      _model.isSendingMessage = false;
+      if (mounted) safeSetState(() {});
+    }
+  }
+
+  void _scrollToBottom({bool isAnimated = false}) {
+    // Using WidgetsBinding to run the code after the UI has been updated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        try {
+          _scrollController.animateTo(
+            0.0,
+            duration: Duration(milliseconds: isAnimated ? 300 : 200),
+            curve: Curves.easeOut,
+          );
+        } catch (e) {
+          print('Could not perform scroll animation: $e');
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -225,7 +223,7 @@ void _scrollToBottom({bool isAnimated = false}) {
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -277,29 +275,41 @@ void _scrollToBottom({bool isAnimated = false}) {
                     if (!snapshot.hasData) {
                       return SizedBox.shrink();
                     }
-                    final columnChatbotsRecord = snapshot.data!.isNotEmpty ? snapshot.data!.first : null;
+                    final columnChatbotsRecord =
+                        snapshot.data!.isNotEmpty ? snapshot.data!.first : null;
                     return Column(
                       mainAxisSize: MainAxisSize.max,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'You\'re chatting with',
-                          style: FlutterFlowTheme.of(context).labelSmall.override(
-                                font: GoogleFonts.manrope(
-                                  fontWeight: FlutterFlowTheme.of(context).labelSmall.fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context).labelSmall.fontStyle,
-                                ),
-                                color: FlutterFlowTheme.of(context).success,
-                              ),
+                          style:
+                              FlutterFlowTheme.of(context).labelSmall.override(
+                                    font: GoogleFonts.manrope(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .labelSmall
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .labelSmall
+                                          .fontStyle,
+                                    ),
+                                    color: FlutterFlowTheme.of(context).success,
+                                  ),
                         ),
                         Text(
-                          valueOrDefault<String>(columnChatbotsRecord?.name, 'AI Assistant'),
-                          style: FlutterFlowTheme.of(context).titleMedium.override(
-                                font: GoogleFonts.manrope(
-                                  fontWeight: FlutterFlowTheme.of(context).titleMedium.fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context).titleMedium.fontStyle,
-                                ),
-                              ),
+                          valueOrDefault<String>(
+                              columnChatbotsRecord?.name, 'AI Assistant'),
+                          style:
+                              FlutterFlowTheme.of(context).titleMedium.override(
+                                    font: GoogleFonts.manrope(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .titleMedium
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .titleMedium
+                                          .fontStyle,
+                                    ),
+                                  ),
                         ),
                       ],
                     );
@@ -319,40 +329,46 @@ void _scrollToBottom({bool isAnimated = false}) {
             child: Column(
               children: [
                 Expanded(
-                  child: _model.isLoading 
-                    ? LoaderWidget() 
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.zero,
-                        reverse: true,
-                        itemCount: FFAppState().chatMessages.length + (_isBotTyping ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (_isBotTyping && index == 0) {
-                            return _buildTypingIndicator();
-                          }
-                          final messageIndex = _isBotTyping ? index - 1 : index;
-                          final message = FFAppState().chatMessages[messageIndex];
-                          return _buildMessageBubble(message, messageIndex);
-                        },
-                      ),
+                  child: _model.isLoading
+                      ? LoaderWidget()
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.zero,
+                          reverse: true,
+                          itemCount: FFAppState().chatMessages.length +
+                              (_isBotTyping ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (_isBotTyping && index == 0) {
+                              return _buildTypingIndicator();
+                            }
+                            final messageIndex =
+                                _isBotTyping ? index - 1 : index;
+                            final message =
+                                FFAppState().chatMessages[messageIndex];
+                            return _buildMessageBubble(message, messageIndex);
+                          },
+                        ),
                 ),
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(),
                   child: Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 25.0),
+                    padding:
+                        EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 25.0),
                     child: Container(
                       decoration: BoxDecoration(),
                       child: Align(
                         alignment: AlignmentDirectional(0.0, 0.0),
                         child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
+                          padding: EdgeInsetsDirectional.fromSTEB(
+                              0.0, 10.0, 0.0, 10.0),
                           child: SafeArea(
                             child: Container(
                               width: double.infinity,
                               height: 60.0,
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context).secondaryBackground,
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
                                 borderRadius: BorderRadius.circular(30.0),
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).alternate,
@@ -360,52 +376,84 @@ void _scrollToBottom({bool isAnimated = false}) {
                                 ),
                               ),
                               child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 0.0, 16.0, 0.0),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
-                                    Icon(Icons.add, color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
+                                    Icon(Icons.add,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        size: 24.0),
                                     Expanded(
                                       child: TextFormField(
                                         controller: _model.textController,
                                         focusNode: _model.textFieldFocusNode,
-                                        onFieldSubmitted: (value) => _handleSendMessage(),
+                                        onFieldSubmitted: (value) =>
+                                            _handleSendMessage(),
                                         autofocus: true,
                                         textInputAction: TextInputAction.send,
                                         decoration: InputDecoration(
                                           hintText: 'Ask anything',
-                                          hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                                            font: GoogleFonts.manrope(
-                                              fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                              fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                                            ),
-                                            color: Color(0x7D57636C),
-                                          ),
+                                          hintStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .override(
+                                                    font: GoogleFonts.manrope(
+                                                      fontWeight:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .bodyMedium
+                                                              .fontWeight,
+                                                      fontStyle:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .bodyMedium
+                                                              .fontStyle,
+                                                    ),
+                                                    color: Color(0x7D57636C),
+                                                  ),
                                           enabledBorder: InputBorder.none,
                                           focusedBorder: InputBorder.none,
                                           errorBorder: InputBorder.none,
                                           focusedErrorBorder: InputBorder.none,
                                         ),
-                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                           font: GoogleFonts.manrope(
-                                             fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                             fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                                           ),
-                                        ),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              font: GoogleFonts.manrope(
+                                                fontWeight:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .fontWeight,
+                                                fontStyle:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .fontStyle,
+                                              ),
+                                            ),
                                       ),
                                     ),
-                                    Icon(Icons.mic, color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
+                                    Icon(Icons.mic,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        size: 24.0),
                                     FlutterFlowIconButton(
                                       borderRadius: 8.0,
                                       buttonSize: 40.0,
-                                      fillColor: FlutterFlowTheme.of(context).primary,
+                                      fillColor:
+                                          FlutterFlowTheme.of(context).primary,
                                       icon: Icon(
                                         Icons.send_rounded,
-                                        color: FlutterFlowTheme.of(context).info,
+                                        color:
+                                            FlutterFlowTheme.of(context).info,
                                         size: 24.0,
                                       ),
-                                      showLoadingIndicator: _model.isSendingMessage,
-                                      onPressed: _model.isSendingMessage ? null : _handleSendMessage,
+                                      showLoadingIndicator:
+                                          _model.isSendingMessage,
+                                      onPressed: _model.isSendingMessage
+                                          ? null
+                                          : _handleSendMessage,
                                     ),
                                   ].divide(SizedBox(width: 12.0)),
                                 ),
@@ -425,117 +473,122 @@ void _scrollToBottom({bool isAnimated = false}) {
     );
   }
 
-Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
-  if (message['sender'] == null || message['text'] == null) return SizedBox.shrink();
-  
-  final isUser = message['sender'].toString() == 'user';
-  final text = message['text'].toString();
-  final messageId = (message['id'] ?? message['timestamp']).toString();
-  
-  // Only animate bot messages that are marked as 'isNew' and at index 0
-  final bool shouldAnimate = !isUser && 
-                             index == 0 && 
-                             message['isNew'] == true && 
-                             !_animatedMessageIds.contains(messageId);
+  Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
+    if (message['sender'] == null || message['text'] == null)
+      return SizedBox.shrink();
 
-  if (isUser) {
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              constraints: BoxConstraints(minHeight: 43.0),
-              decoration: BoxDecoration(
-                color: FlutterFlowTheme.of(context).primary,
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text(
-                  text,
-                  style: FlutterFlowTheme.of(context).bodyMedium.override(
-                    font: GoogleFonts.manrope(
-                      fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                      fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                    ),
-                    color: FlutterFlowTheme.of(context).info,
+    final isUser = message['sender'].toString() == 'user';
+    final text = message['text'].toString();
+    final messageId = (message['id'] ?? message['timestamp']).toString();
+
+    // Only animate bot messages that are marked as 'isNew' and at index 0
+    final bool shouldAnimate = !isUser &&
+        index == 0 &&
+        message['isNew'] == true &&
+        !_animatedMessageIds.contains(messageId);
+
+    if (isUser) {
+      return Padding(
+        padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(minHeight: 43.0),
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).primary,
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text(
+                    text,
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          font: GoogleFonts.manrope(
+                            fontWeight: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .fontWeight,
+                            fontStyle: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .fontStyle,
+                          ),
+                          color: FlutterFlowTheme.of(context).info,
+                        ),
                   ),
                 ),
               ),
             ),
-          ),
-          Container(
-            width: 36.0,
-            height: 36.0,
-            decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).alternate,
-              shape: BoxShape.circle,
-            ),
-            child: Align(
-              alignment: AlignmentDirectional(0.0, 0.0),
-              child: Icon(
-                Icons.face,
-                color: FlutterFlowTheme.of(context).tertiary,
-                size: 24.0,
+            Container(
+              width: 36.0,
+              height: 36.0,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).alternate,
+                shape: BoxShape.circle,
+              ),
+              child: Align(
+                alignment: AlignmentDirectional(0.0, 0.0),
+                child: Icon(
+                  Icons.face,
+                  color: FlutterFlowTheme.of(context).tertiary,
+                  size: 24.0,
+                ),
               ),
             ),
-          ),
-        ].divide(SizedBox(width: 12.0)),
-      ),
-    );
-  } else {
-    final botTextStyle = FlutterFlowTheme.of(context).bodyMedium.override(
-      font: GoogleFonts.manrope(
-        fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-        fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-      ),
-    );
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36.0,
-            height: 36.0,
-            decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).primary,
-              shape: BoxShape.circle,
+          ].divide(SizedBox(width: 12.0)),
+        ),
+      );
+    } else {
+      final botTextStyle = FlutterFlowTheme.of(context).bodyMedium.override(
+            font: GoogleFonts.manrope(
+              fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+              fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
             ),
-            child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20.0),
-          ),
-          Container(
-            width: 260.0,
-            constraints: BoxConstraints(minHeight: 43.0),
-            decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).secondaryBackground, 
-              borderRadius: BorderRadius.circular(16.0)
+          );
+      return Padding(
+        padding: EdgeInsetsDirectional.fromSTEB(0.0, 10.0, 0.0, 10.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36.0,
+              height: 36.0,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.smart_toy_rounded,
+                  color: Colors.white, size: 20.0),
             ),
-            child: Padding(
-              padding: EdgeInsets.all(12.0),
-              child: shouldAnimate
-                ? custom_widgets.BotMessage(
-                    key: Key(messageId),
-                    text: text,
-                    textColor: FlutterFlowTheme.of(context).primaryText,
-                    dotColor: FlutterFlowTheme.of(context).primary,
-                    onComplete: () {
-                      if(mounted) _animatedMessageIds.add(messageId);
-                    },
-                  )
-                : Text(text, style: botTextStyle),
+            Container(
+              width: 260.0,
+              constraints: BoxConstraints(minHeight: 43.0),
+              decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  borderRadius: BorderRadius.circular(16.0)),
+              child: Padding(
+                padding: EdgeInsets.all(12.0),
+                child: shouldAnimate
+                    ? custom_widgets.BotMessage(
+                        key: Key(messageId),
+                        text: text,
+                        textColor: FlutterFlowTheme.of(context).primaryText,
+                        dotColor: FlutterFlowTheme.of(context).primary,
+                        onComplete: () {
+                          if (mounted) _animatedMessageIds.add(messageId);
+                        },
+                      )
+                    : Text(text, style: botTextStyle),
+              ),
             ),
-          ),
-        ].divide(SizedBox(width: 12.0)),
-      ),
-    );
+          ].divide(SizedBox(width: 12.0)),
+        ),
+      );
+    }
   }
-}
 
   Widget _buildTypingIndicator() {
     return Padding(
@@ -551,10 +604,10 @@ Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
               color: FlutterFlowTheme.of(context).primary,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20.0),
+            child:
+                Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20.0),
           ),
           Container(
-            width: 260.0,
             constraints: BoxConstraints(minHeight: 43.0),
             decoration: BoxDecoration(
               color: FlutterFlowTheme.of(context).secondaryBackground,
@@ -563,7 +616,6 @@ Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
             child: Padding(
               padding: EdgeInsets.all(12.0),
               child: custom_widgets.TypingIndicator(
-                width: 60.0,
                 height: 20.0,
                 dotColor: FlutterFlowTheme.of(context).primary,
                 dotSize: 6.0,

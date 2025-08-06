@@ -33,6 +33,12 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  void safeSetStateIfMounted(VoidCallback fn) {
+    if (mounted) {
+      safeSetState(fn);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -51,7 +57,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
             _model.namePartsResult,
             r'''$.firstName''',
           ).toString();
-          safeSetState(() {});
+          safeSetStateIfMounted(() {});
         }),
         Future(() async {
           // Update page with last name
@@ -59,7 +65,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
             _model.namePartsResult,
             r'''$.lastName''',
           ).toString();
-          safeSetState(() {});
+          safeSetStateIfMounted(() {});
         }),
       ]);
       // Store original first name
@@ -67,13 +73,13 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
         _model.namePartsResult,
         r'''$.firstName''',
       ).toString();
-      safeSetState(() {});
+      safeSetStateIfMounted(() {});
       // Store original last name
       _model.originalLastName = getJsonField(
         _model.namePartsResult,
         r'''$.lastName''',
       ).toString();
-      safeSetState(() {});
+      safeSetStateIfMounted(() {});
     });
 
     _model.emailTextController ??=
@@ -88,7 +94,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
     _model.firstNameFocusNode!.addListener(
       () async {
         _model.firstNameInputTouched = true;
-        safeSetState(() {});
+        safeSetStateIfMounted(() {});
       },
     );
     _model.lastNameTextController ??= TextEditingController(
@@ -99,7 +105,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
     _model.lastNameFocusNode!.addListener(
       () async {
         _model.lastNameInputTouched = true;
-        safeSetState(() {});
+        safeSetStateIfMounted(() {});
       },
     );
   }
@@ -108,8 +114,10 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
   void dispose() {
     // On page dispose action.
     () async {
-      _model.hasSelectedPhoto = false;
-      safeSetState(() {});
+      if (mounted) {
+        _model.hasSelectedPhoto = false;
+        safeSetState(() {});
+      }
     }();
 
     _model.dispose();
@@ -215,8 +223,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                     );
                                   } else if ((_model.hasSelectedPhoto ==
                                           false) &&
-                                      (FFAppState().userProfilePhoto !=
-                                              '')) {
+                                      (FFAppState().userProfilePhoto != '')) {
                                     return Container(
                                       width: 100.0,
                                       height: 100.0,
@@ -266,7 +273,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                     selectedMedia.every((m) =>
                                         validateFileFormat(
                                             m.storagePath, context))) {
-                                  safeSetState(() => _model
+                                  safeSetStateIfMounted(() => _model
                                           .isDataUploading_selectedMediaResult =
                                       true);
                                   var selectedUploadedFiles =
@@ -284,23 +291,25 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                             ))
                                         .toList();
                                   } finally {
-                                    _model.isDataUploading_selectedMediaResult =
-                                        false;
+                                    if (mounted) {
+                                      _model.isDataUploading_selectedMediaResult =
+                                          false;
+                                    }
                                   }
                                   if (selectedUploadedFiles.length ==
                                       selectedMedia.length) {
-                                    safeSetState(() {
+                                    safeSetStateIfMounted(() {
                                       _model.uploadedLocalFile_selectedMediaResult =
                                           selectedUploadedFiles.first;
                                     });
                                   } else {
-                                    safeSetState(() {});
+                                    safeSetStateIfMounted(() {});
                                     return;
                                   }
                                 }
 
                                 _model.hasSelectedPhoto = true;
-                                safeSetState(() {});
+                                safeSetStateIfMounted(() {});
                               },
                               text: 'Choose a photo',
                               options: FFButtonOptions(
@@ -513,7 +522,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                   () async {
                                     _model.firstNameValue =
                                         _model.firstNameTextController.text;
-                                    safeSetState(() {});
+                                    safeSetStateIfMounted(() {});
                                   },
                                 ),
                                 autofocus: false,
@@ -637,7 +646,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                   () async {
                                     _model.lastNameValue =
                                         _model.lastNameTextController.text;
-                                    safeSetState(() {});
+                                    safeSetStateIfMounted(() {});
                                   },
                                 ),
                                 autofocus: false,
@@ -783,13 +792,15 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                     if (_model.hasSelectedPhoto == true) {
                                       // Upload the photo to FB
                                       {
-                                        safeSetState(() => _model
+                                        safeSetStateIfMounted(() => _model
                                                 .isDataUploading_photoUploadResult =
                                             true);
+
                                         var selectedUploadedFiles =
                                             <FFUploadedFile>[];
                                         var selectedMedia = <SelectedFile>[];
                                         var downloadUrls = <String>[];
+
                                         try {
                                           selectedUploadedFiles = _model
                                                   .uploadedLocalFile_selectedMediaResult
@@ -802,8 +813,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                               : <FFUploadedFile>[];
                                           selectedMedia =
                                               selectedFilesFromUploadedFiles(
-                                            selectedUploadedFiles,
-                                          );
+                                                  selectedUploadedFiles);
                                           downloadUrls = (await Future.wait(
                                             selectedMedia.map(
                                               (m) async => await uploadData(
@@ -814,27 +824,29 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                               .map((u) => u!)
                                               .toList();
                                         } finally {
-                                          _model.isDataUploading_photoUploadResult =
-                                              false;
+                                          if (mounted) {
+                                            _model.isDataUploading_photoUploadResult =
+                                                false;
+                                          }
                                         }
+
                                         if (selectedUploadedFiles.length ==
                                                 selectedMedia.length &&
                                             downloadUrls.length ==
                                                 selectedMedia.length) {
-                                          safeSetState(() {
+                                          safeSetStateIfMounted(() {
                                             _model.uploadedLocalFile_photoUploadResult =
                                                 selectedUploadedFiles.first;
                                             _model.uploadedFileUrl_photoUploadResult =
                                                 downloadUrls.first;
                                           });
                                         } else {
-                                          safeSetState(() {});
+                                          safeSetStateIfMounted(() {});
                                           return;
                                         }
                                       }
 
                                       // Add photo to user doc
-
                                       firestoreBatch.update(
                                           currentUserReference!,
                                           createUsersRecordData(
@@ -844,45 +856,49 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                       // Set profile photo in app
                                       FFAppState().userProfilePhoto = _model
                                           .uploadedFileUrl_photoUploadResult;
-                                      safeSetState(() {});
+                                      safeSetStateIfMounted(() {});
                                       // Set hasSelectedPhoto to false
                                       _model.hasSelectedPhoto = false;
-                                      safeSetState(() {});
+                                      safeSetStateIfMounted(() {});
                                     }
                                     // Update Firestore
-
                                     firestoreBatch.update(
                                         currentUserReference!,
                                         createUsersRecordData(
                                           displayName: _model.combinedFullName,
                                         ));
+
                                     if ((_model.firstNameValue !=
                                             _model.originalFirstName) ||
                                         (_model.lastNameValue !=
                                             _model.originalLastName)) {
                                       // Update Firebase Auth
                                       await actions.updateFirebaseDisplayName(
-                                        _model.combinedFullName!,
-                                      );
+                                          _model.combinedFullName!);
+
                                       // Update O.G. first name value
                                       _model.originalFirstName =
                                           _model.firstNameValue;
-                                      safeSetState(() {});
+                                      safeSetStateIfMounted(() {});
+
                                       // Update O.G last name value
                                       _model.originalLastName =
                                           _model.lastNameValue;
-                                      safeSetState(() {});
+                                      safeSetStateIfMounted(() {});
                                     }
                                     // Refresh widgets
                                     await actions.refreshFirebaseUser();
 
-                                    context.goNamed(
-                                        ProfileSettingsWidget.routeName);
+                                    // Navigera endast om widgeten fortfarande är mounted
+                                    if (mounted) {
+                                      context.goNamed(
+                                          ProfileSettingsWidget.routeName);
+                                    }
                                   } finally {
                                     await firestoreBatch.commit();
                                   }
 
-                                  safeSetState(() {});
+                                  safeSetStateIfMounted(() {});
                                 },
                           text: 'Save Changes',
                           options: FFButtonOptions(
