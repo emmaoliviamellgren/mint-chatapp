@@ -17,46 +17,77 @@ Future<void> processMessages(
     bool hasChanges = false;
     
     List<dynamic> messagesToProcess = [];
-    if (apiResponse is Map && apiResponse.containsKey('messages')) {
-      messagesToProcess = apiResponse['messages'] ?? []; // Historik
-    } else if (apiResponse is Map && apiResponse.containsKey('type') && apiResponse['type'] == 'message.created') {
-      messagesToProcess = [apiResponse['data']]; // SSE-meddelande
-    } else if (apiResponse is Map) {
-      messagesToProcess = [apiResponse]; // Fallback för andra format
+    
+    // Handle different response formats
+    if (apiResponse is Map) {
+      if (apiResponse.containsKey('messages')) {
+        // Historical messages
+        messagesToProcess = apiResponse['messages'] ?? [];
+      } else if (apiResponse.containsKey('type') && apiResponse['type'] == 'message.created') {
+        // SSE message
+        messagesToProcess = [apiResponse['data']];
+      } else if (apiResponse.containsKey('data')) {
+        // Direct data format
+        messagesToProcess = [apiResponse['data']];
+      } else {
+        // Fallback - treat whole response as message
+        messagesToProcess = [apiResponse];
+      }
     }
 
     for (var messageData in messagesToProcess) {
-      // Dubbelkolla att vi har all nödvändig data
-      if (messageData?['id'] != null && messageData?['payload']?['type'] == 'text') {
+      // Check if we have valid message data
+      if (messageData != null && 
+          messageData['id'] != null && 
+          messageData['payload'] != null &&
+          messageData['payload']['type'] == 'text') {
+        
         final messageId = messageData['id'].toString();
         
+        // Check if message already exists
         final messageExists = currentMessages.any((m) => m['id'] == messageId);
 
         if (!messageExists) {
           final now = DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now();
+          final isUser = messageData['userId'] == currentUserId;
+          
+          // Remove typing indicator when bot message arrives
+          if (!isUser && isFromStreaming) {
+            currentMessages.removeWhere((msg) => 
+              msg['isTyping'] == true || 
+              msg['sender'] == 'typing'
+            );
+          }
+          
           final newMessage = {
             'id': messageId,
             'text': messageData['payload']['text'],
-            'sender': messageData['userId'] == currentUserId ? 'user' : 'bot',
+            'sender': isUser ? 'user' : 'bot',
             'userId': messageData['userId'],
             'timestamp': now.toIso8601String(),
+            'isNew': isFromStreaming && !isUser, // Mark bot messages from streaming as new for animation
           };
+          
           currentMessages.insert(0, newMessage);
           hasChanges = true;
+          
+          print('Added ${isUser ? "user" : "bot"} message: ${messageData['payload']['text']}');
         }
       }
     }
 
     if (hasChanges) {
-      // Sortera listan för att säkerställa korrekt ordning
+      // Sort messages by timestamp (newest first for reverse ListView)
       currentMessages.sort((a, b) =>
           (DateTime.tryParse(b['timestamp'] ?? '') ?? DateTime(1970))
               .compareTo(DateTime.tryParse(a['timestamp'] ?? '') ?? DateTime(1970)));
       
-      // Använd en säker uppdatering
+      // Update app state
       FFAppState().update(() {
         FFAppState().chatMessages = currentMessages;
       });
+      
+      print('Updated chat messages. Total count: ${currentMessages.length}');
     }
   } catch (e) {
     print('Error processing messages: $e');

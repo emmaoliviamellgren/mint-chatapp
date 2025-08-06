@@ -49,19 +49,23 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
     _model = createModel(context, () => ChatModel());
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
-    if (!_isInitialized) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
+    
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isInitialized) {
         _initializeChat();
-      });
-    }
+      }
+    });
   }
   
   void safeSetState(VoidCallback fn) {
-    if (mounted) setState(fn);
+    if (mounted) {
+      setState(fn);
+    }
   }
 
   Future<void> _initializeChat() async {
     if (_isInitialized || !mounted) return;
+    
     safeSetState(() => _model.isLoading = true);
     
     try {
@@ -73,8 +77,11 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
         if (createUserResult.succeeded) {
           FFAppState().userKey = getJsonField(createUserResult.jsonBody, r'''$.key''').toString();
           await actions.saveBotpressUserKey(FFAppState().userKey);
-        } else { throw Exception('Error creating user'); }
+        } else { 
+          throw Exception('Error creating user'); 
+        }
       }
+      
       final storedConversationId = await actions.getBotpressConversationId();
       if (storedConversationId != null && storedConversationId.isNotEmpty) {
         FFAppState().conversationId = storedConversationId;
@@ -83,18 +90,33 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
         if (createConversationResult.succeeded) {
           FFAppState().conversationId = getJsonField(createConversationResult.jsonBody, r'''$.conversation.id''').toString();
           await actions.saveBotpressConversationId(FFAppState().conversationId);
-        } else { throw Exception('Error creating conversation'); }
+        } else { 
+          throw Exception('Error creating conversation'); 
+        }
       }
+      
       FFAppState().chatMessages = []; 
-      final loadMessagesResult = await ListChatMessagesCall.call(userKey: FFAppState().userKey, conversationId: FFAppState().conversationId);
+      final loadMessagesResult = await ListChatMessagesCall.call(
+        userKey: FFAppState().userKey, 
+        conversationId: FFAppState().conversationId
+      );
+      
       if (loadMessagesResult.succeeded) {
         await actions.processMessages(loadMessagesResult.jsonBody, currentUserUid, false);
-      } else { throw Exception('Error loading messages'); }
+      } else { 
+        throw Exception('Error loading messages'); 
+      }
+      
       await _listenToStream();
       _isInitialized = true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to initialize chat: ${e.toString()}'), backgroundColor: FlutterFlowTheme.of(context).error));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to initialize chat: ${e.toString()}'),
+            backgroundColor: FlutterFlowTheme.of(context).error
+          )
+        );
       }
     } finally {
       safeSetState(() => _model.isLoading = false);
@@ -102,72 +124,99 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
   }
 
   Future<void> _listenToStream() async {
-    await _streamSubscription?.cancel();
-    final streamingApiResult = await ListenToChatConversationCall.call(userKey: FFAppState().userKey, conversationId: FFAppState().conversationId);
-    if (streamingApiResult.succeeded && mounted) {
-      _streamSubscription = streamingApiResult.streamedResponse?.stream.transform(utf8.decoder).transform(const LineSplitter()).transform(ServerSentEventLineTransformer()).map((m) => ResponseStreamMessage(message: m)).listen(
-        (onMessageInput) async {
-          if (!mounted) return;
-          final dynamic jsonData = onMessageInput.serverSentEvent.jsonData;
-          if (jsonData == null) return;
-          
-          final messagePayload = getJsonField(jsonData, r'''$.data''') ?? getJsonField(jsonData, r'''$.payload''');
-          if (messagePayload == null) return;
+  await _streamSubscription?.cancel();
+  final streamingApiResult = await ListenToChatConversationCall.call(
+    userKey: FFAppState().userKey, 
+    conversationId: FFAppState().conversationId
+  );
+  
+  if (streamingApiResult.succeeded && mounted) {
+    _streamSubscription = streamingApiResult.streamedResponse?.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .transform(ServerSentEventLineTransformer())
+        .map((m) => ResponseStreamMessage(message: m))
+        .listen(
+      (onMessageInput) async {
+        if (!mounted) return;
+        final dynamic jsonData = onMessageInput.serverSentEvent.jsonData;
+        if (jsonData == null) return;
+        
+        final messagePayload = getJsonField(jsonData, r'''$.data''') ?? getJsonField(jsonData, r'''$.payload''');
+        if (messagePayload == null) return;
 
-          if (_isBotTyping) {
-            final incomingUserId = getJsonField(messagePayload, r'''$.userId''').toString();
-            if (incomingUserId != currentUserUid) {
-              safeSetState(() => _isBotTyping = false);
-            }
-          }
-          
-          await actions.processMessages(jsonData, currentUserUid, true);
-          _scrollToBottom();
-        },
-      );
-    }
+        // Check if this is a bot message and hide typing indicator
+        final incomingUserId = getJsonField(messagePayload, r'''$.userId''').toString();
+        if (incomingUserId != currentUserUid && _isBotTyping) {
+          safeSetState(() => _isBotTyping = false);
+        }
+        
+        await actions.processMessages(jsonData, currentUserUid, true);
+        _scrollToBottom();
+      },
+      onError: (error) {
+        print('SSE Stream error: $error');
+        // Hide typing indicator on error
+        if (_isBotTyping) {
+          safeSetState(() => _isBotTyping = false);
+        }
+      },
+      onDone: () {
+        print('SSE Stream closed');
+        // Hide typing indicator when stream closes
+        if (_isBotTyping) {
+          safeSetState(() => _isBotTyping = false);
+        }
+      },
+    );
   }
+}
 
-  Future<void> _handleSendMessage() async {
-    final messageText = _model.textController.text;
-    if (messageText.isEmpty || _model.isSendingMessage) return;
-    
-    safeSetState(() => _model.isSendingMessage = true);
-    final messageToSend = _model.textController.text;
-    _model.textController?.clear();
-    FocusScope.of(context).unfocus();
-    
-    FFAppState().insertAtIndexInChatMessages(0, {
-      'id': 'temp_${DateTime.now().millisecondsSinceEpoch}',
-      'sender': 'user',
-      'text': messageToSend,
-      'timestamp': DateTime.now().toIso8601String(),
-      'userId': currentUserUid,
-    });
-    
-    safeSetState(() => _isBotTyping = true);
-    _scrollToBottom(isAnimated: true);
+Future<void> _handleSendMessage() async {
+  final messageText = _model.textController.text;
+  if (messageText.isEmpty || _model.isSendingMessage) return;
+  
+  safeSetState(() => _model.isSendingMessage = true);
+  final messageToSend = _model.textController.text;
+  _model.textController?.clear();
+  FocusScope.of(context).unfocus();
+  
+  // Don't add user message immediately - let it come through the stream
+  // This prevents duplicate messages
+  
+  // Show typing indicator
+  safeSetState(() => _isBotTyping = true);
+  _scrollToBottom(isAnimated: true);
 
-    await SendChatMessageCall.call(userKey: FFAppState().userKey, conversationId: FFAppState().conversationId, text: messageToSend);
-    
+  try {
+    // Send message to API
+    await SendChatMessageCall.call(
+      userKey: FFAppState().userKey, 
+      conversationId: FFAppState().conversationId, 
+      text: messageToSend
+    );
+  } catch (e) {
+    print('Error sending message: $e');
+    // Hide typing indicator on error
+    safeSetState(() => _isBotTyping = false);
+  } finally {
     _model.isSendingMessage = false;
     safeSetState(() {});
   }
+}
   
-  // **** HÄR ÄR DEN KORRIGERADE FUNKTIONEN ****
-  void _scrollToBottom({bool isAnimated = false}) {
-    // Använder SchedulerBinding för att garantera att scrollningen sker efter att
-    // frame'n har ritats färdigt. Detta förhindrar kraschen.
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-                0.0,
-                duration: Duration(milliseconds: isAnimated ? 300 : 200),
-                curve: Curves.easeOut,
-            );
-        }
-    });
-  }
+void _scrollToBottom({bool isAnimated = false}) {
+  // Use WidgetsBinding instead of SchedulerBinding for better timing
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted && _scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: Duration(milliseconds: isAnimated ? 300 : 200),
+        curve: Curves.easeOut,
+      );
+    }
+  });
+}
 
   @override
   void dispose() {
@@ -270,18 +319,23 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
             child: Column(
               children: [
                 Expanded(
-                  child: _model.isLoading ? LoaderWidget() : ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.zero,
-                    reverse: true,
-                    itemCount: FFAppState().chatMessages.length,
-                    itemBuilder: (context, index) {
-                      final message = FFAppState().chatMessages[index];
-                      return _buildMessageBubble(message, index);
-                    },
-                  ),
+                  child: _model.isLoading 
+                    ? LoaderWidget() 
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.zero,
+                        reverse: true,
+                        itemCount: FFAppState().chatMessages.length + (_isBotTyping ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (_isBotTyping && index == 0) {
+                            return _buildTypingIndicator();
+                          }
+                          final messageIndex = _isBotTyping ? index - 1 : index;
+                          final message = FFAppState().chatMessages[messageIndex];
+                          return _buildMessageBubble(message, messageIndex);
+                        },
+                      ),
                 ),
-                if (_isBotTyping) _buildTypingIndicator(),
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(),
@@ -351,7 +405,7 @@ class _ChatWidgetState extends State<ChatWidget> with AutomaticKeepAliveClientMi
                                         size: 24.0,
                                       ),
                                       showLoadingIndicator: _model.isSendingMessage,
-                                      onPressed: _handleSendMessage,
+                                      onPressed: _model.isSendingMessage ? null : _handleSendMessage,
                                     ),
                                   ].divide(SizedBox(width: 12.0)),
                                 ),
