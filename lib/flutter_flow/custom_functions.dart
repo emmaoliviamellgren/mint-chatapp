@@ -121,16 +121,16 @@ bool shouldCompleteAnimation(
   int messageIndex,
 ) {
   try {
-    // Check if it's a typing message (should always animate regardless of index)
-    final messageId = message['id']?.toString() ?? '';
-    if (messageId.contains('typing_')) {
-      print('Found typing message at index $messageIndex - should animate');
+    // Check if it's a typing placeholder message
+    final messageText = message['text']?.toString() ?? '';
+    if (messageText == 'TYPING_PLACEHOLDER') {
+      print('Found typing placeholder at index $messageIndex - should animate');
       return false; // Don't complete - should animate
     }
 
-    // Check if message has isNew flag (should animate if at index 0 or 1)
+    // Check if message has isNew flag and is at index 0 (newest message in reverse list)
     final isNew = message['isNew'];
-    if ((isNew == true || isNew == 'true') && messageIndex <= 1) {
+    if ((isNew == true || isNew == 'true') && messageIndex == 0) {
       print('Found new message at index $messageIndex - should animate');
       return false; // Don't complete - should animate
     }

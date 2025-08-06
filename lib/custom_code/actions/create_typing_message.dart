@@ -15,35 +15,32 @@ Future<void> createTypingMessage() async {
         List.from(FFAppState().chatMessages ?? []);
 
     // Remove any existing typing messages first (prevent duplicates)
-    currentMessages.removeWhere((msg) => msg['isTyping'] == true);
+    currentMessages.removeWhere((msg) => 
+      msg['isTyping'] == true || 
+      msg['sender'] == 'typing'
+    );
 
-    // FORCE: Remove any messages that might interfere and put typing at absolute top
-    // This ensures typing message is always at index 0
-
-    // Create temporary typing message as JSON string then parse back
-    final tempMessageJson = jsonEncode({
-      'id': 'typing_${DateTime.now().millisecondsSinceEpoch}',
-      'text': 'TYPING_PLACEHOLDER',
-      'sender': 'bot',
+    // Create typing message with a unique ID that won't conflict
+    final typingMessage = {
+      'id': 'typing_indicator_${DateTime.now().millisecondsSinceEpoch}',
+      'text': '...', // Use dots instead of TYPING_PLACEHOLDER
+      'sender': 'typing', // Special sender type for typing
       'isNew': true,
-      'timestamp': DateTime.now().toIso8601String(),
       'isTyping': true,
+      'timestamp': DateTime.now().toIso8601String(),
       'formattedTime':
           '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-    });
+    };
 
-    final tempMessage = jsonDecode(tempMessageJson);
+    // Insert at the beginning (index 0) for reverse ListView
+    currentMessages.insert(0, typingMessage);
 
-    // Insert at the very beginning (index 0) for reverse ListView
-    currentMessages.insert(0, tempMessage);
-
-    // Update app state immediately
+    // Update app state
     FFAppState().update(() {
       FFAppState().chatMessages = currentMessages;
     });
 
-    print('Created typing message with ID: ${tempMessage['id']} at index 0');
-    print('Total messages now: ${currentMessages.length}');
+    print('Created typing message at index 0');
   } catch (e) {
     print('Error creating typing message: $e');
   }
