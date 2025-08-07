@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:csv/csv.dart';
 import 'package:synchronized/synchronized.dart';
 import 'flutter_flow/flutter_flow_util.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -19,12 +20,37 @@ class FFAppState extends ChangeNotifier {
 
   Future initializePersistedState() async {
     secureStorage = FlutterSecureStorage();
+
     await _safeInitAsync(() async {
       _userKey = await secureStorage.getString('ff_userKey') ?? _userKey;
     });
+
     await _safeInitAsync(() async {
       _conversationId =
           await secureStorage.getString('ff_conversationId') ?? _conversationId;
+    });
+
+    await _safeInitAsync(() async {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        _userDisplayName = currentUser.displayName ?? 'User';
+        _userProfilePhoto = currentUser.photoURL ?? '';
+
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+
+          if (userDoc.exists) {
+            final userData = userDoc.data()!;
+            _userDisplayName = userData['display_name'] ?? _userDisplayName;
+            _userProfilePhoto = userData['photo_url'] ?? _userProfilePhoto;
+          }
+        } catch (e) {
+          print('Error loading user data from Firestore: $e');
+        }
+      }
     });
   }
 
@@ -35,7 +61,6 @@ class FFAppState extends ChangeNotifier {
 
   late FlutterSecureStorage secureStorage;
 
-  /// Current index for slide in slideshow on landing page
   int _currentSlideIndex = 0;
   int get currentSlideIndex => _currentSlideIndex;
   set currentSlideIndex(int value) {

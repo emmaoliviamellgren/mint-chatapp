@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'complete_profile_model.dart';
 export 'complete_profile_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CompleteProfileWidget extends StatefulWidget {
   const CompleteProfileWidget({super.key});
@@ -47,9 +48,8 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
 
   @override
   void dispose() {
-    if (mounted) {
+    if (mounted && _model != null) {
       _model.hasSelectedPhoto = false;
-      safeSetState(() {});
     }
 
     _model.dispose();
@@ -176,54 +176,158 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                     ),
                     FFButtonWidget(
                       onPressed: () async {
-                        final selectedMedia =
-                            await selectMediaWithSourceBottomSheet(
-                          context: context,
-                          maxHeight: 400.00,
-                          allowPhoto: true,
-                          backgroundColor: FlutterFlowTheme.of(context).info,
-                          textColor: FlutterFlowTheme.of(context).primary,
-                          pickerFontFamily: 'Manrope',
-                        );
-                        if (selectedMedia != null &&
-                            selectedMedia.every((m) =>
-                                validateFileFormat(m.storagePath, context))) {
-                          safeSetStateIfMounted(() => _model
-                                  .isDataUploading_selectedMediaResultInCompleteProfile =
-                              true);
+                        if (!mounted) return;
 
-                          var selectedUploadedFiles = <FFUploadedFile>[];
-
-                          try {
-                            selectedUploadedFiles = selectedMedia
-                                .map((m) => FFUploadedFile(
-                                      name: m.storagePath.split('/').last,
-                                      bytes: m.bytes,
-                                      height: m.dimensions?.height,
-                                      width: m.dimensions?.width,
-                                      blurHash: m.blurHash,
-                                    ))
-                                .toList();
-                          } finally {
-                            if (mounted) {
-                              _model.isDataUploading_selectedMediaResultInCompleteProfile =
-                                  false;
-                            }
-                          }
-                          if (selectedUploadedFiles.length ==
-                              selectedMedia.length) {
-                            safeSetStateIfMounted(() {
-                              _model.uploadedLocalFile_selectedMediaResultInCompleteProfile =
-                                  selectedUploadedFiles.first;
-                            });
-                          } else {
-                            safeSetStateIfMounted(() {});
-                            return;
-                          }
+                        if (_model.formKey.currentState == null ||
+                            !_model.formKey.currentState!.validate()) {
+                          return;
                         }
 
-                        _model.hasSelectedPhoto = true;
-                        safeSetStateIfMounted(() {});
+                        // Visa loading dialog
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return WillPopScope(
+                              onWillPop: () async => false,
+                              child: Center(
+                                child: Container(
+                                  padding: EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 16),
+                                      Text('Setting up your profile...'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+
+                        try {
+                          String? photoUrl;
+
+                          // Upload photo först om det finns
+                          if (_model.hasSelectedPhoto == true &&
+                              _model.uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                      .bytes !=
+                                  null &&
+                              _model
+                                  .uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                  .bytes!
+                                  .isNotEmpty) {
+                            final timestamp =
+                                DateTime.now().millisecondsSinceEpoch;
+                            final storagePath =
+                                'users/${FirebaseAuth.instance.currentUser?.uid}/uploads/profile_$timestamp.jpg';
+
+                            photoUrl = await uploadData(
+                                storagePath,
+                                _model
+                                    .uploadedLocalFile_selectedMediaResultInCompleteProfile
+                                    .bytes!);
+
+                            if (photoUrl == null) {
+                              throw Exception('Failed to upload photo');
+                            }
+                          }
+
+                          final displayName =
+                              '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}';
+
+                          // Update Firestore
+                          Map<String, dynamic> userData = {
+                            'display_name': displayName,
+                            'profile_complete': true,
+                          };
+
+                          if (photoUrl != null) {
+                            userData['photo_url'] = photoUrl;
+                          }
+
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(FirebaseAuth.instance.currentUser?.uid)
+                              .update(userData);
+
+                          // Update Firebase Auth
+                          final currentUser = FirebaseAuth.instance.currentUser;
+                          if (currentUser != null) {
+                            List<Future> authUpdates = [
+                              currentUser.updateDisplayName(displayName),
+                            ];
+
+                            if (photoUrl != null) {
+                              authUpdates
+                                  .add(currentUser.updatePhotoURL(photoUrl));
+                            }
+
+                            await Future.wait(authUpdates);
+                            await currentUser.reload();
+                          }
+
+                          // Update FFAppState
+                          FFAppState().update(() {
+                            FFAppState().userDisplayName = displayName;
+                            if (photoUrl != null) {
+                              FFAppState().userProfilePhoto = photoUrl;
+                            }
+                          });
+
+                          // Vänta lite för att säkerställa att allt är klart
+                          await Future.delayed(Duration(milliseconds: 300));
+
+                          if (mounted) {
+                            // Reset local state
+                            _model.hasSelectedPhoto = false;
+
+                            // Stäng loading dialog
+                            Navigator.of(context).pop();
+
+                            // Vänta lite innan navigation
+                            await Future.delayed(Duration(milliseconds: 200));
+
+                            if (mounted) {
+                              // Navigate till dashboard
+                              if (Navigator.of(context).canPop()) {
+                                context.pop();
+                              }
+
+                              context.pushNamed(
+                                UserDashboardWidget.routeName,
+                                extra: <String, dynamic>{
+                                  kTransitionInfoKey: TransitionInfo(
+                                    hasTransition: true,
+                                    transitionType: PageTransitionType.scale,
+                                    alignment: Alignment.bottomCenter,
+                                  ),
+                                },
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          print('Error completing profile: $e');
+
+                          if (mounted) {
+                            Navigator.of(context).pop(); // Stäng loading dialog
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Failed to complete profile setup: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        }
                       },
                       text: 'Choose a photo',
                       options: FFButtonOptions(
@@ -490,10 +594,13 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           !_model.formKey.currentState!.validate()) {
                         return;
                       }
+
+                      String? photoUrl;
+
                       if (_model.hasSelectedPhoto == true) {
                         // Upload the photo to FB
                         {
-                          safeSetState(() => _model
+                          safeSetStateIfMounted(() => _model
                                   .isDataUploading_photoUploadResultFromCompleteProfile =
                               true);
                           var selectedUploadedFiles = <FFUploadedFile>[];
@@ -528,47 +635,60 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           if (selectedUploadedFiles.length ==
                                   selectedMedia.length &&
                               downloadUrls.length == selectedMedia.length) {
-                            safeSetState(() {
+                            safeSetStateIfMounted(() {
                               _model.uploadedLocalFile_photoUploadResultFromCompleteProfile =
                                   selectedUploadedFiles.first;
                               _model.uploadedFileUrl_photoUploadResultFromCompleteProfile =
                                   downloadUrls.first;
                             });
+
+                            photoUrl = _model
+                                .uploadedFileUrl_photoUploadResultFromCompleteProfile;
                           } else {
-                            safeSetState(() {});
+                            safeSetStateIfMounted(() {});
                             return;
                           }
                         }
 
-                        // Add photo to user doc
-
-                        firestoreBatch.update(
-                            currentUserReference!,
-                            createUsersRecordData(
-                              photoUrl: _model
-                                  .uploadedFileUrl_photoUploadResultFromCompleteProfile,
-                            ));
-                        // Set profile photo in app
-                        FFAppState().userProfilePhoto = _model
-                            .uploadedFileUrl_photoUploadResultFromCompleteProfile;
-                        safeSetState(() {});
                         // Set hasSelectedPhoto to false
                         _model.hasSelectedPhoto = false;
-                        safeSetState(() {});
+                        safeSetStateIfMounted(() {});
                       }
-                      // Update Firestore
 
+                      final displayName =
+                          '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}';
+
+                      // Update Firestore
                       firestoreBatch.update(
                           currentUserReference!,
                           createUsersRecordData(
-                            displayName:
-                                '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}',
+                            displayName: displayName,
                             profileComplete: true,
+                            photoUrl: photoUrl, // Lägg till detta
                           ));
+
+                      await firestoreBatch.commit();
+
                       // Update Firebase Auth
-                      await actions.updateFirebaseDisplayName(
-                        '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}',
-                      );
+                      await actions.updateFirebaseDisplayName(displayName);
+
+                      // Om det finns en photo URL, uppdatera även Firebase Auth
+                      if (photoUrl != null && photoUrl.isNotEmpty) {
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        if (currentUser != null) {
+                          await currentUser.updatePhotoURL(photoUrl);
+                          await currentUser.reload();
+                        }
+                      }
+
+                      // Uppdatera FFAppState
+                      FFAppState().update(() {
+                        FFAppState().userDisplayName = displayName;
+                        if (photoUrl != null && photoUrl.isNotEmpty) {
+                          FFAppState().userProfilePhoto = photoUrl;
+                        }
+                      });
+
                       if (Navigator.of(context).canPop()) {
                         context.pop();
                       }
@@ -582,8 +702,8 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           ),
                         },
                       );
-                    } finally {
-                      await firestoreBatch.commit();
+                    } catch (e) {
+                      print('Error in complete profile: $e');
                     }
                   },
                   text: 'Continue',

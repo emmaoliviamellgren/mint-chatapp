@@ -1,3 +1,5 @@
+import 'package:firebase_storage/firebase_storage.dart';
+
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/firebase_storage/storage.dart';
@@ -8,7 +10,6 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/upload_data.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
-import '/index.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -17,6 +18,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'edit_profile_model.dart';
 export 'edit_profile_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 
 class EditProfileWidget extends StatefulWidget {
   const EditProfileWidget({super.key});
@@ -30,12 +35,35 @@ class EditProfileWidget extends StatefulWidget {
 
 class _EditProfileWidgetState extends State<EditProfileWidget> {
   late EditProfileModel _model;
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   void safeSetStateIfMounted(VoidCallback fn) {
     if (mounted) {
-      safeSetState(fn);
+      setState(fn);
+    }
+  }
+
+  Future<Uint8List> compressImage(Uint8List imageBytes,
+      {int maxWidth = 800, int quality = 85}) async {
+    try {
+      // Decode bilden
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        imageBytes,
+        targetWidth: maxWidth, // Begränsa storleken
+      );
+
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      final ui.Image image = frameInfo.image;
+
+      // Encode som JPEG med komprimering
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png, // Eller rawRgba för bättre kvalitet
+      );
+
+      return byteData!.buffer.asUint8List();
+    } catch (e) {
+      print('Image compression failed: $e');
+      return imageBytes; // Returnera original om komprimering misslyckas
     }
   }
 
@@ -112,16 +140,26 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
   @override
   void dispose() {
-    // On page dispose action.
-    () async {
-      if (mounted) {
+    // Förbättrad dispose metod
+    try {
+      // Sätt alla boolean flags till false först
+      if (_model != null) {
         _model.hasSelectedPhoto = false;
-        safeSetState(() {});
+        _model.firstNameInputTouched = false;
+        _model.lastNameInputTouched = false;
       }
-    }();
 
-    _model.dispose();
+      // Ta bort listeners innan dispose
+      _model.firstNameFocusNode?.removeListener(() {});
+      _model.lastNameFocusNode?.removeListener(() {});
 
+      // Dispose av modellen
+      _model.dispose();
+    } catch (e) {
+      print('Error in dispose: $e');
+    }
+
+    // Anropa super.dispose() sist
     super.dispose();
   }
 
@@ -780,125 +818,174 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                   _model.hasSelectedPhoto)
                               ? null
                               : () async {
-                                  final firestoreBatch =
-                                      FirebaseFirestore.instance.batch();
+                                  if (!mounted) return;
+                                  setState(() {
+                                  });
+
                                   try {
-                                    // Combine first + last name for FB
-                                    _model.combinedFullName =
-                                        await actions.combineNames(
-                                      _model.firstNameValue,
-                                      _model.lastNameValue,
-                                    );
-                                    if (_model.hasSelectedPhoto == true) {
-                                      // Upload the photo to FB
-                                      {
-                                        safeSetStateIfMounted(() => _model
-                                                .isDataUploading_photoUploadResult =
-                                            true);
+                                    final firstName =
+                                        _model.firstNameValue?.trim() ?? '';
+                                    final lastName =
+                                        _model.lastNameValue?.trim() ?? '';
+                                    final combinedFullName =
+                                        firstName.isNotEmpty &&
+                                                lastName.isNotEmpty
+                                            ? '$firstName $lastName'
+                                            : (firstName.isNotEmpty
+                                                ? firstName
+                                                : lastName);
 
-                                        var selectedUploadedFiles =
-                                            <FFUploadedFile>[];
-                                        var selectedMedia = <SelectedFile>[];
-                                        var downloadUrls = <String>[];
+                                    List<Future> allUpdates = [];
+                                    String? newPhotoUrl;
 
-                                        try {
-                                          selectedUploadedFiles = _model
+                                    if (_model.hasSelectedPhoto == true &&
+                                        _model.uploadedLocalFile_selectedMediaResult
+                                                .bytes !=
+                                            null &&
+                                        _model
+                                            .uploadedLocalFile_selectedMediaResult
+                                            .bytes!
+                                            .isNotEmpty) {
+                                      // Snabb upload utan extra metadata
+                                      final timestamp =
+                                          DateTime.now().millisecondsSinceEpoch;
+                                      final userId = FirebaseAuth
+                                              .instance.currentUser?.uid ??
+                                          'unknown';
+                                      final storagePath =
+                                          'users/$userId/profile_$timestamp.jpg';
+
+                                      // Lägg till upload som parallell operation
+                                      allUpdates.add(FirebaseStorage.instance
+                                          .ref()
+                                          .child(storagePath)
+                                          .putData(
+                                              _model
                                                   .uploadedLocalFile_selectedMediaResult
-                                                  .bytes!
-                                                  .isNotEmpty
-                                              ? [
-                                                  _model
-                                                      .uploadedLocalFile_selectedMediaResult
-                                                ]
-                                              : <FFUploadedFile>[];
-                                          selectedMedia =
-                                              selectedFilesFromUploadedFiles(
-                                                  selectedUploadedFiles);
-                                          downloadUrls = (await Future.wait(
-                                            selectedMedia.map(
-                                              (m) async => await uploadData(
-                                                  m.storagePath, m.bytes),
-                                            ),
-                                          ))
-                                              .where((u) => u != null)
-                                              .map((u) => u!)
-                                              .toList();
-                                        } finally {
-                                          if (mounted) {
-                                            _model.isDataUploading_photoUploadResult =
-                                                false;
-                                          }
-                                        }
+                                                  .bytes!,
+                                              SettableMetadata(
+                                                  contentType: 'image/jpeg'))
+                                          .then((taskSnapshot) =>
+                                              taskSnapshot.ref.getDownloadURL())
+                                          .then((url) => newPhotoUrl = url));
+                                    }
 
-                                        if (selectedUploadedFiles.length ==
-                                                selectedMedia.length &&
-                                            downloadUrls.length ==
-                                                selectedMedia.length) {
-                                          safeSetStateIfMounted(() {
-                                            _model.uploadedLocalFile_photoUploadResult =
-                                                selectedUploadedFiles.first;
-                                            _model.uploadedFileUrl_photoUploadResult =
-                                                downloadUrls.first;
-                                          });
-                                        } else {
-                                          safeSetStateIfMounted(() {});
-                                          return;
+                                    // 2. Firestore update som parallell operation
+                                    Map<String, dynamic> updateData = {
+                                      'display_name': combinedFullName
+                                    };
+
+                                    // Vi lägger till photo_url senare när vi vet URL:en
+                                    allUpdates.add(Future.delayed(Duration.zero)
+                                        .then((_) async {
+                                      // Vänta på att photo upload ska bli klar först
+                                      if (_model.hasSelectedPhoto &&
+                                          allUpdates.isNotEmpty) {
+                                        await allUpdates
+                                            .first; // Vänta på photo upload
+                                        if (newPhotoUrl != null) {
+                                          updateData['photo_url'] = newPhotoUrl;
                                         }
                                       }
 
-                                      // Add photo to user doc
-                                      firestoreBatch.update(
-                                          currentUserReference!,
-                                          createUsersRecordData(
-                                            photoUrl: _model
-                                                .uploadedFileUrl_photoUploadResult,
-                                          ));
-                                      // Set profile photo in app
-                                      FFAppState().userProfilePhoto = _model
-                                          .uploadedFileUrl_photoUploadResult;
-                                      safeSetStateIfMounted(() {});
-                                      // Set hasSelectedPhoto to false
-                                      _model.hasSelectedPhoto = false;
-                                      safeSetStateIfMounted(() {});
+                                      // Nu uppdatera Firestore
+                                      return FirebaseFirestore.instance
+                                          .collection('users')
+                                          .doc(FirebaseAuth
+                                              .instance.currentUser?.uid)
+                                          .update(updateData);
+                                    }));
+
+                                    // 3. Firebase Auth updates som parallell operation
+                                    final currentUser =
+                                        FirebaseAuth.instance.currentUser;
+                                    if (currentUser != null) {
+                                      // Endast uppdatera display name om det behövs
+                                      if ((_model.firstNameValue !=
+                                              _model.originalFirstName) ||
+                                          (_model.lastNameValue !=
+                                              _model.originalLastName)) {
+                                        allUpdates.add(
+                                            currentUser.updateDisplayName(
+                                                combinedFullName));
+                                      }
+
+                                      // Photo URL uppdateras senare när vi har den
+                                      if (_model.hasSelectedPhoto) {
+                                        allUpdates.add(
+                                            Future.delayed(Duration.zero)
+                                                .then((_) async {
+                                          if (allUpdates.isNotEmpty) {
+                                            await allUpdates
+                                                .first;
+                                            if (newPhotoUrl != null &&
+                                                currentUser != null) {
+                                              await currentUser
+                                                  .updatePhotoURL(newPhotoUrl);
+                                            }
+                                          }
+                                        }));
+                                      }
                                     }
-                                    // Update Firestore
-                                    firestoreBatch.update(
-                                        currentUserReference!,
-                                        createUsersRecordData(
-                                          displayName: _model.combinedFullName,
-                                        ));
 
-                                    if ((_model.firstNameValue !=
-                                            _model.originalFirstName) ||
-                                        (_model.lastNameValue !=
-                                            _model.originalLastName)) {
-                                      // Update Firebase Auth
-                                      await actions.updateFirebaseDisplayName(
-                                          _model.combinedFullName!);
+                                    await Future.wait(allUpdates);
 
-                                      // Update O.G. first name value
-                                      _model.originalFirstName =
-                                          _model.firstNameValue;
-                                      safeSetStateIfMounted(() {});
-
-                                      // Update O.G last name value
-                                      _model.originalLastName =
-                                          _model.lastNameValue;
-                                      safeSetStateIfMounted(() {});
+                                    if (currentUser != null) {
+                                      await currentUser.reload();
                                     }
-                                    // Refresh widgets
-                                    await actions.refreshFirebaseUser();
 
-                                    // Navigera endast om widgeten fortfarande är mounted
+                                    if (!mounted) return;
+
+                                    _model.originalFirstName =
+                                        _model.firstNameValue;
+                                    _model.originalLastName =
+                                        _model.lastNameValue;
+                                    _model.hasSelectedPhoto = false;
+
+                                    FFAppState().update(() {
+                                      FFAppState().userDisplayName =
+                                          combinedFullName;
+                                      if (newPhotoUrl != null) {
+                                        FFAppState().userProfilePhoto =
+                                            newPhotoUrl!;
+                                      }
+                                    });
+
                                     if (mounted) {
-                                      context.goNamed(
-                                          ProfileSettingsWidget.routeName);
-                                    }
-                                  } finally {
-                                    await firestoreBatch.commit();
-                                  }
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              Icon(Icons.check_circle,
+                                                  color: Colors.white),
+                                              SizedBox(width: 8),
+                                              Text('Profile updated!'),
+                                            ],
+                                          ),
+                                          backgroundColor: Colors.green,
+                                          duration: Duration(seconds: 1),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
 
-                                  safeSetStateIfMounted(() {});
+                                      Navigator.of(context).pop();
+                                    }
+                                  } catch (e) {
+                                    print('Error updating profile: $e');
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Update failed: ${e.toString()}'),
+                                          backgroundColor: Colors.red,
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  }
                                 },
                           text: 'Save Changes',
                           options: FFButtonOptions(
