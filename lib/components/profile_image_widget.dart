@@ -76,7 +76,7 @@ class ProfileImageWidget extends StatelessWidget {
                 width: size,
                 height: size,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: Colors.transparent,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
