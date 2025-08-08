@@ -69,19 +69,45 @@ class _ChatWidgetState extends State<ChatWidget>
 
     try {
       final userStatus = await actions.checkBotpressUserStatus();
+      String botpressUserId;
+
       if (userStatus == 'existing_user') {
-        FFAppState().userKey = (await actions.getBotpressUserKey())!;
+        // User already exists, get the stored key and user ID
+        final storedUserKey = await actions.getBotpressUserKey();
+        final storedBotpressUserId = await actions.getBotpressUserId();
+
+        if (storedUserKey.isNotEmpty && storedBotpressUserId.isNotEmpty) {
+          FFAppState().userKey = storedUserKey;
+          botpressUserId = storedBotpressUserId;
+        } else {
+          throw Exception('Stored user data is incomplete');
+        }
       } else {
-        final createUserResult =
-            await CreateChatUserCall.call(userId: currentUserUid);
+        // Create new user with a unique identifier for Botpress
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        botpressUserId = '${currentUserUid}_$timestamp';
+
+        final createUserResult = await CreateChatUserCall.call(
+          userId: botpressUserId,
+        );
+
         if (createUserResult.succeeded) {
           FFAppState().userKey =
               getJsonField(createUserResult.jsonBody, r'''$.key''').toString();
+
+          // Store both the key and the user ID
           await actions.saveBotpressUserKey(FFAppState().userKey);
+          await actions.saveBotpressUserId(botpressUserId);
         } else {
-          throw Exception('Error creating user');
+          print('Create user failed: ${createUserResult.statusCode}');
+          print('Error body: ${createUserResult.bodyText}');
+          throw Exception(
+              'Error creating user: ${createUserResult.statusCode}');
         }
       }
+
+      // Store the Botpress user ID in app state for message comparison
+      FFAppState().botpressUserId = botpressUserId;
 
       final storedConversationId = await actions.getBotpressConversationId();
       if (storedConversationId != null && storedConversationId.isNotEmpty) {
@@ -89,13 +115,18 @@ class _ChatWidgetState extends State<ChatWidget>
       } else {
         final createConversationResult = await CreateChatConversationCall.call(
             userKey: FFAppState().userKey);
+
         if (createConversationResult.succeeded) {
           FFAppState().conversationId = getJsonField(
                   createConversationResult.jsonBody, r'''$.conversation.id''')
               .toString();
           await actions.saveBotpressConversationId(FFAppState().conversationId);
         } else {
-          throw Exception('Error creating conversation');
+          print(
+              'Create conversation failed: ${createConversationResult.statusCode}');
+          print('Error body: ${createConversationResult.bodyText}');
+          throw Exception(
+              'Error creating conversation: ${createConversationResult.statusCode}');
         }
       }
 
@@ -106,21 +137,23 @@ class _ChatWidgetState extends State<ChatWidget>
 
       if (loadMessagesResult.succeeded) {
         await actions.processMessages(
-            loadMessagesResult.jsonBody, currentUserUid, false);
+            loadMessagesResult.jsonBody, botpressUserId, false);
 
-        // Check if messages are empty and add initial message
         final isEmpty =
             await actions.areMessagesEmpty(loadMessagesResult.jsonBody);
         if (isEmpty) {
           await actions.addInitialMessage();
         }
       } else {
-        throw Exception('Error loading messages');
+        print('Load messages failed: ${loadMessagesResult.statusCode}');
+        throw Exception(
+            'Error loading messages: ${loadMessagesResult.statusCode}');
       }
 
       await _listenToStream();
       _isInitialized = true;
     } catch (e) {
+      print('Full initialization error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Failed to initialize chat: ${e.toString()}'),
@@ -155,11 +188,12 @@ class _ChatWidgetState extends State<ChatWidget>
 
           final incomingUserId =
               getJsonField(messagePayload, r'''$.userId''').toString();
-          if (incomingUserId != currentUserUid && _isBotTyping) {
+          if (incomingUserId != FFAppState().botpressUserId && _isBotTyping) {
             safeSetState(() => _isBotTyping = false);
           }
 
-          await actions.processMessages(jsonData, currentUserUid, true);
+          await actions.processMessages(
+              jsonData, FFAppState().botpressUserId, true);
           _scrollToBottom();
         },
         onError: (error) {
@@ -207,7 +241,6 @@ class _ChatWidgetState extends State<ChatWidget>
   }
 
   void _scrollToBottom({bool isAnimated = false}) {
-    // Using WidgetsBinding to run the code after the UI has been updated
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
         try {

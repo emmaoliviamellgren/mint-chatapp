@@ -18,6 +18,12 @@ class FFAppState extends ChangeNotifier {
     _instance = FFAppState._internal();
   }
 
+  String _botpressUserId = '';
+  String get botpressUserId => _botpressUserId;
+  set botpressUserId(String value) {
+    _botpressUserId = value;
+  }
+
   Future initializePersistedState() async {
     secureStorage = FlutterSecureStorage();
 
@@ -85,7 +91,6 @@ class FFAppState extends ChangeNotifier {
     _hasFirebaseError = value;
   }
 
-  /// Messages with bot and user
   List<dynamic> _chatMessages = [];
   List<dynamic> get chatMessages => _chatMessages;
   set chatMessages(List<dynamic> value) {

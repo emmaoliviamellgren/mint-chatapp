@@ -14,3 +14,5 @@ export 'process_messages.dart' show processMessages;
 export 'trigger_u_i_refresh.dart' show triggerUIRefresh;
 export 'botpress_user_setup.dart' show botpressUserSetup;
 export 'create_typing_message.dart' show createTypingMessage;
+export 'save_botpress_user_id.dart' show saveBotpressUserId;
+export 'get_botpress_user_id.dart' show getBotpressUserId;
