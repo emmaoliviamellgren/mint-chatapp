@@ -1,8 +1,6 @@
 import 'package:firebase_storage/firebase_storage.dart';
-
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
-import '/backend/firebase_storage/storage.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -19,9 +17,8 @@ import 'package:provider/provider.dart';
 import 'edit_profile_model.dart';
 export 'edit_profile_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'dart:ui' as ui;
-import 'dart:typed_data';
+import '/components/profile_image_widget.dart';
 
 class EditProfileWidget extends StatefulWidget {
   const EditProfileWidget({super.key});
@@ -46,24 +43,21 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
   Future<Uint8List> compressImage(Uint8List imageBytes,
       {int maxWidth = 800, int quality = 85}) async {
     try {
-      // Decode bilden
       final ui.Codec codec = await ui.instantiateImageCodec(
         imageBytes,
-        targetWidth: maxWidth, // Begränsa storleken
+        targetWidth: maxWidth,
       );
 
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
       final ui.Image image = frameInfo.image;
-
-      // Encode som JPEG med komprimering
       final ByteData? byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png, // Eller rawRgba för bättre kvalitet
+        format: ui.ImageByteFormat.png,
       );
 
       return byteData!.buffer.asUint8List();
     } catch (e) {
       print('Image compression failed: $e');
-      return imageBytes; // Returnera original om komprimering misslyckas
+      return imageBytes;
     }
   }
 
@@ -72,7 +66,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
     super.initState();
     _model = createModel(context, () => EditProfileModel());
 
-    // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       // Run name split function
       _model.namePartsResult = await actions.splitFullName(
@@ -140,26 +133,18 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
   @override
   void dispose() {
-    // Förbättrad dispose metod
     try {
-      // Sätt alla boolean flags till false först
       if (_model != null) {
         _model.hasSelectedPhoto = false;
         _model.firstNameInputTouched = false;
         _model.lastNameInputTouched = false;
       }
-
-      // Ta bort listeners innan dispose
       _model.firstNameFocusNode?.removeListener(() {});
       _model.lastNameFocusNode?.removeListener(() {});
-
-      // Dispose av modellen
       _model.dispose();
     } catch (e) {
       print('Error in dispose: $e');
     }
-
-    // Anropa super.dispose() sist
     super.dispose();
   }
 
@@ -246,43 +231,36 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                 builder: (context) {
                                   if (_model.hasSelectedPhoto == true) {
                                     return Container(
-                                      width: 100.0,
-                                      height: 100.0,
-                                      clipBehavior: Clip.antiAlias,
+                                      width: 70.0,
+                                      height: 70.0,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondary,
+                                          width: 3.0,
+                                        ),
                                       ),
-                                      child: Image.memory(
-                                        _model.uploadedLocalFile_selectedMediaResult
-                                                .bytes ??
-                                            Uint8List.fromList([]),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    );
-                                  } else if ((_model.hasSelectedPhoto ==
-                                          false) &&
-                                      (FFAppState().userProfilePhoto != '')) {
-                                    return Container(
-                                      width: 100.0,
-                                      height: 100.0,
-                                      clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Image.network(
-                                        FFAppState().userProfilePhoto,
-                                        fit: BoxFit.cover,
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(35.0),
+                                        child: Image.memory(
+                                          _model.uploadedLocalFile_selectedMediaResult
+                                                  .bytes ??
+                                              Uint8List.fromList([]),
+                                          width: 70.0,
+                                          height: 70.0,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     );
                                   } else {
-                                    return Align(
-                                      alignment: AlignmentDirectional(0.0, 0.0),
-                                      child: Icon(
-                                        Icons.face,
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondary,
-                                        size: 32.0,
-                                      ),
+                                    return ProfileImageWidget(
+                                      imageUrl: FFAppState().userProfilePhoto,
+                                      size: 70.0,
+                                      borderColor: FlutterFlowTheme.of(context)
+                                          .secondary,
+                                      borderWidth: 1.0,
                                     );
                                   }
                                 },
@@ -819,8 +797,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                               ? null
                               : () async {
                                   if (!mounted) return;
-                                  setState(() {
-                                  });
+                                  setState(() {});
 
                                   try {
                                     final firstName =
@@ -916,8 +893,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                                             Future.delayed(Duration.zero)
                                                 .then((_) async {
                                           if (allUpdates.isNotEmpty) {
-                                            await allUpdates
-                                                .first;
+                                            await allUpdates.first;
                                             if (newPhotoUrl != null &&
                                                 currentUser != null) {
                                               await currentUser

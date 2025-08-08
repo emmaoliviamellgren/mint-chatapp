@@ -17,6 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'user_dashboard_model.dart';
 export 'user_dashboard_model.dart';
+import '/components/profile_image_widget.dart';
 
 class UserDashboardWidget extends StatefulWidget {
   const UserDashboardWidget({super.key});
@@ -251,35 +252,12 @@ class _UserDashboardWidgetState extends State<UserDashboardWidget>
                                     width: 3.0,
                                   ),
                                 ),
-                                child: Builder(
-                                  builder: (context) {
-                                    if (FFAppState().userProfilePhoto != '') {
-                                      return Padding(
-                                        padding: EdgeInsets.all(2.0),
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(44.0),
-                                          child: Image.network(
-                                            FFAppState().userProfilePhoto,
-                                            width: 44.0,
-                                            height: 44.0,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      return Align(
-                                        alignment:
-                                            AlignmentDirectional(0.0, 0.0),
-                                        child: Icon(
-                                          Icons.face,
-                                          color: FlutterFlowTheme.of(context)
-                                              .secondary,
-                                          size: 32.0,
-                                        ),
-                                      );
-                                    }
-                                  },
+                                child: ProfileImageWidget(
+                                  imageUrl: FFAppState().userProfilePhoto,
+                                  size: 60.0,
+                                  borderColor:
+                                      FlutterFlowTheme.of(context).secondary,
+                                  borderWidth: 1.0,
                                 ),
                               ),
                             ).animateOnPageLoad(
