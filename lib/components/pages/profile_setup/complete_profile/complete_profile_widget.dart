@@ -183,7 +183,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           return;
                         }
 
-                        // Visa loading dialog
                         showDialog(
                           context: context,
                           barrierDismissible: false,
@@ -214,7 +213,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                         try {
                           String? photoUrl;
 
-                          // Upload photo först om det finns
                           if (_model.hasSelectedPhoto == true &&
                               _model.uploadedLocalFile_selectedMediaResultInCompleteProfile
                                       .bytes !=
@@ -242,10 +240,9 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           final displayName =
                               '${_model.firstNameTextController.text} ${_model.lastNameTextController.text}';
 
-                          // Update Firestore
                           Map<String, dynamic> userData = {
                             'display_name': displayName,
-                            'profile_complete': true,
+                            'email_user_profile_complete': true,
                           };
 
                           if (photoUrl != null) {
@@ -257,7 +254,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                               .doc(FirebaseAuth.instance.currentUser?.uid)
                               .update(userData);
 
-                          // Update Firebase Auth
                           final currentUser = FirebaseAuth.instance.currentUser;
                           if (currentUser != null) {
                             List<Future> authUpdates = [
@@ -273,7 +269,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                             await currentUser.reload();
                           }
 
-                          // Update FFAppState
                           FFAppState().update(() {
                             FFAppState().userDisplayName = displayName;
                             if (photoUrl != null) {
@@ -281,21 +276,16 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                             }
                           });
 
-                          // Vänta lite för att säkerställa att allt är klart
                           await Future.delayed(Duration(milliseconds: 300));
 
                           if (mounted) {
-                            // Reset local state
                             _model.hasSelectedPhoto = false;
 
-                            // Stäng loading dialog
                             Navigator.of(context).pop();
 
-                            // Vänta lite innan navigation
                             await Future.delayed(Duration(milliseconds: 200));
 
                             if (mounted) {
-                              // Navigate till dashboard
                               if (Navigator.of(context).canPop()) {
                                 context.pop();
                               }
@@ -316,7 +306,7 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           print('Error completing profile: $e');
 
                           if (mounted) {
-                            Navigator.of(context).pop(); // Stäng loading dialog
+                            Navigator.of(context).pop();
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -598,7 +588,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                       String? photoUrl;
 
                       if (_model.hasSelectedPhoto == true) {
-                        // Upload the photo to FB
                         {
                           safeSetStateIfMounted(() => _model
                                   .isDataUploading_photoUploadResultFromCompleteProfile =
@@ -650,7 +639,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           }
                         }
 
-                        // Set hasSelectedPhoto to false
                         _model.hasSelectedPhoto = false;
                         safeSetStateIfMounted(() {});
                       }
@@ -663,16 +651,14 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                           currentUserReference!,
                           createUsersRecordData(
                             displayName: displayName,
-                            profileComplete: true,
-                            photoUrl: photoUrl, // Lägg till detta
+                            emailUserProfileComplete: true,
+                            photoUrl: photoUrl,
                           ));
 
                       await firestoreBatch.commit();
 
-                      // Update Firebase Auth
                       await actions.updateFirebaseDisplayName(displayName);
 
-                      // Om det finns en photo URL, uppdatera även Firebase Auth
                       if (photoUrl != null && photoUrl.isNotEmpty) {
                         final currentUser = FirebaseAuth.instance.currentUser;
                         if (currentUser != null) {
@@ -681,7 +667,6 @@ class _CompleteProfileWidgetState extends State<CompleteProfileWidget> {
                         }
                       }
 
-                      // Uppdatera FFAppState
                       FFAppState().update(() {
                         FFAppState().userDisplayName = displayName;
                         if (photoUrl != null && photoUrl.isNotEmpty) {

@@ -107,6 +107,13 @@ class _ChatWidgetState extends State<ChatWidget>
       if (loadMessagesResult.succeeded) {
         await actions.processMessages(
             loadMessagesResult.jsonBody, currentUserUid, false);
+
+        // Check if messages are empty and add initial message
+        final isEmpty =
+            await actions.areMessagesEmpty(loadMessagesResult.jsonBody);
+        if (isEmpty) {
+          await actions.addInitialMessage();
+        }
       } else {
         throw Exception('Error loading messages');
       }

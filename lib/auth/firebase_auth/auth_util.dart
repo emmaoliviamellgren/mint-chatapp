@@ -23,9 +23,6 @@ String get currentUserDisplayName =>
 String get currentUserPhoto =>
     currentUserDocument?.photoUrl ?? currentUser?.photoUrl ?? '';
 
-String get currentPhoneNumber =>
-    currentUserDocument?.phoneNumber ?? currentUser?.phoneNumber ?? '';
-
 String get currentJwtToken => _currentJwtToken ?? '';
 
 bool get currentUserEmailVerified => currentUser?.emailVerified ?? false;

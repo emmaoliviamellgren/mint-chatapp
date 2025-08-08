@@ -41,7 +41,7 @@ Future<void> handleFirebaseAuth(
           'uid': userCredential.user!.uid,
           'created_time': FieldValue.serverTimestamp(),
           'photo_url': userCredential.user!.photoURL ?? '',
-          'profile_complete': false,
+          'email_user_profile_complete': false,
         });
       }
     } else {
@@ -67,7 +67,6 @@ Future<void> handleFirebaseAuth(
       FFAppState().hasFirebaseError = false;
       FFAppState().firebaseErrorMessage = '';
     });
-
   } on FirebaseAuthException catch (e) {
     String errorMessage;
 

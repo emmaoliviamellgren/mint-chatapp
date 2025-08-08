@@ -16,7 +16,6 @@ class MintFirebaseUser extends BaseAuthUser {
         email: user?.email,
         displayName: user?.displayName,
         photoUrl: user?.photoURL,
-        phoneNumber: user?.phoneNumber,
       );
 
   @override

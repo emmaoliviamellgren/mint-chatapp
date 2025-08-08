@@ -7,6 +7,7 @@ export 'get_botpress_conversation_id.dart' show getBotpressConversationId;
 export 'save_botpress_user_key.dart' show saveBotpressUserKey;
 export 'save_botpress_conversation_id.dart' show saveBotpressConversationId;
 export 'are_messages_empty.dart' show areMessagesEmpty;
+export 'add_initial_message.dart' show addInitialMessage;
 export 'update_firebase_display_name.dart' show updateFirebaseDisplayName;
 export 'refresh_firebase_user.dart' show refreshFirebaseUser;
 export 'process_messages.dart' show processMessages;

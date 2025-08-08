@@ -40,15 +40,10 @@ class UsersRecord extends FirestoreRecord {
   String get photoUrl => _photoUrl ?? '';
   bool hasPhotoUrl() => _photoUrl != null;
 
-  // "phone_number" field.
-  String? _phoneNumber;
-  String get phoneNumber => _phoneNumber ?? '';
-  bool hasPhoneNumber() => _phoneNumber != null;
-
-  // "profile_complete" field.
-  bool? _profileComplete;
-  bool get profileComplete => _profileComplete ?? false;
-  bool hasProfileComplete() => _profileComplete != null;
+  // "email_user_profile_complete" field.
+  bool? _emailUserProfileComplete;
+  bool get emailUserProfileComplete => _emailUserProfileComplete ?? false;
+  bool hasEmailUserProfileComplete() => _emailUserProfileComplete != null;
 
   // "botpress_user_key" field.
   String? _botpressUserKey;
@@ -71,8 +66,8 @@ class UsersRecord extends FirestoreRecord {
     _uid = snapshotData['uid'] as String?;
     _createdTime = snapshotData['created_time'] as DateTime?;
     _photoUrl = snapshotData['photo_url'] as String?;
-    _phoneNumber = snapshotData['phone_number'] as String?;
-    _profileComplete = snapshotData['profile_complete'] as bool?;
+    _emailUserProfileComplete =
+        snapshotData['email_user_profile_complete'] as bool?;
     _botpressUserKey = snapshotData['botpress_user_key'] as String?;
     _botpressLastChatTime = snapshotData['botpress_last_chat_time'] as String?;
     _botpressConversationId =
@@ -118,8 +113,7 @@ Map<String, dynamic> createUsersRecordData({
   String? uid,
   DateTime? createdTime,
   String? photoUrl,
-  String? phoneNumber,
-  bool? profileComplete,
+  bool? emailUserProfileComplete,
   String? botpressUserKey,
   String? botpressLastChatTime,
   String? botpressConversationId,
@@ -131,8 +125,7 @@ Map<String, dynamic> createUsersRecordData({
       'uid': uid,
       'created_time': createdTime,
       'photo_url': photoUrl,
-      'phone_number': phoneNumber,
-      'profile_complete': profileComplete,
+      'email_user_profile_complete': emailUserProfileComplete,
       'botpress_user_key': botpressUserKey,
       'botpress_last_chat_time': botpressLastChatTime,
       'botpress_conversation_id': botpressConversationId,
@@ -152,8 +145,7 @@ class UsersRecordDocumentEquality implements Equality<UsersRecord> {
         e1?.uid == e2?.uid &&
         e1?.createdTime == e2?.createdTime &&
         e1?.photoUrl == e2?.photoUrl &&
-        e1?.phoneNumber == e2?.phoneNumber &&
-        e1?.profileComplete == e2?.profileComplete &&
+        e1?.emailUserProfileComplete == e2?.emailUserProfileComplete &&
         e1?.botpressUserKey == e2?.botpressUserKey &&
         e1?.botpressLastChatTime == e2?.botpressLastChatTime &&
         e1?.botpressConversationId == e2?.botpressConversationId;
@@ -166,8 +158,7 @@ class UsersRecordDocumentEquality implements Equality<UsersRecord> {
         e?.uid,
         e?.createdTime,
         e?.photoUrl,
-        e?.phoneNumber,
-        e?.profileComplete,
+        e?.emailUserProfileComplete,
         e?.botpressUserKey,
         e?.botpressLastChatTime,
         e?.botpressConversationId
