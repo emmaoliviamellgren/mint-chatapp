@@ -16,6 +16,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'chat_model.dart';
+import '/components/voice_input_widget.dart';
 
 export 'chat_model.dart';
 
@@ -474,10 +475,18 @@ class _ChatWidgetState extends State<ChatWidget>
                                             ),
                                       ),
                                     ),
-                                    Icon(Icons.mic,
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
-                                        size: 24.0),
+                                    // REPLACE the static mic icon with the VoiceInputWidget
+                                    VoiceInputWidget(
+                                      onTextReceived: (recognizedText) {
+                                        _model.textController?.text =
+                                            recognizedText;
+                                        // Optionally auto-send the message after voice input
+                                        // Future.delayed(Duration(milliseconds: 300), () {
+                                        //   _handleSendMessage();
+                                        // });
+                                      },
+                                      isEnabled: !_model.isSendingMessage,
+                                    ),
                                     FlutterFlowIconButton(
                                       borderRadius: 8.0,
                                       buttonSize: 40.0,
@@ -521,7 +530,6 @@ class _ChatWidgetState extends State<ChatWidget>
     final text = message['text'].toString();
     final messageId = (message['id'] ?? message['timestamp']).toString();
 
-    // Only animate bot messages that are marked as 'isNew' and at index 0
     final bool shouldAnimate = !isUser &&
         index == 0 &&
         message['isNew'] == true &&
